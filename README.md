@@ -58,26 +58,28 @@ This playbook optimizes the **host OS only** for running KVM virtual machines on
 
 ## Quick Start
 
-1. **Upload to host**:
-```bash
-scp -r . root@YOUR_HOST_IP:/tmp/kvm-host-optimization/
-```
-
-2. **Run setup on host**:
+1. **Run setup on host**:
 ```bash
 ssh root@YOUR_HOST_IP
-cd /tmp/kvm-host-optimization
+curl -O https://raw.githubusercontent.com/norandom/debian_kvm_optimizer/main/setup.sh
+chmod +x setup.sh
 ./setup.sh
 ```
 
-3. **Monitor**:
+The setup script will:
+- Prompt for your repository URL
+- Install Ansible and required packages
+- Set up the ansible-pull service to automatically pull from your repository
+- Run the initial optimization
+
+2. **Monitor**:
 ```bash
 # Check service status
 systemctl status ansible-pull.timer
 
 # Watch logs
 journalctl -u ansible-pull.service -f
-tail -f /var/log/kvm-optimization.log
+tail -f /var/log/Debian_KVM_Optimization.log
 ```
 
 ## Architecture
@@ -133,7 +135,7 @@ ansible-playbook -i inventory/hosts.yml site.yml --tags="network"
 iptables -t nat -L -n -v
 
 # View recent optimizations
-tail -50 /var/log/kvm-optimization.log
+tail -50 /var/log/Debian_KVM_Optimization.log
 tail -50 /var/log/ksm-optimization.log
 tail -50 /var/log/network-setup.log
 ```
@@ -145,7 +147,7 @@ tail -50 /var/log/network-setup.log
 - **KSM monitoring**: Every 5 minutes
 - **Network monitoring**: Every 10 minutes
 - **System cleanup**: Weekly on Sunday at 3 AM
-- **Optimization logs**: `/var/log/kvm-optimization.log`
+- **Optimization logs**: `/var/log/Debian_KVM_Optimization.log`
 - **Storage alerts**: `/var/log/host-monitor.log`
 - **KSM metrics**: `/var/log/ksm-monitor.log`
 - **Network status**: `/var/log/network-monitor.log`
