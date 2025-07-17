@@ -42,7 +42,7 @@
   lineinfile:
     path: /etc/default/grub
     regexp: '^GRUB_CMDLINE_LINUX='
-    line: 'GRUB_CMDLINE_LINUX="quiet splash intel_pstate=disable processor.max_cstate=1 intel_idle.max_cstate=0 mitigations=off spectre_v2=off spec_store_bypass_disable=off l1tf=off mds=off tsx_async_abort=off zswap.enabled=1 zswap.compressor=lz4"'
+    line: 'GRUB_CMDLINE_LINUX="quiet splash intel_pstate=disable processor.max_cstate=1 intel_idle.max_cstate=0 mitigations=off zswap.enabled=1 zswap.compressor=lz4"'
     backup: yes
   notify: update grub
   tags: [cpu, grub, security, swap]
