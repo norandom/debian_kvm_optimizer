@@ -97,6 +97,7 @@
     value: "50"
     state: present
     reload: yes
+  ignore_errors: yes  # Parameter may not exist on all kernel versions
   tags: [cache, memory]
 
 - name: Configure dirty page writeback for heavy BitTorrent I/O
@@ -110,6 +111,7 @@
     - { key: "vm.dirty_background_ratio", value: "2" }
     - { key: "vm.dirty_expire_centisecs", value: "1500" }
     - { key: "vm.dirty_writeback_centisecs", value: "250" }
+  ignore_errors: yes  # Parameters may not exist on all kernel versions
   tags: [writeback, memory, bittorrent]
 
 - name: Create storage cleanup script
