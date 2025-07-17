@@ -1,0 +1,103 @@
+---
+- name: Install KSM packages
+  apt:
+    name:
+      - ksmtuned
+      - util-linux
+    state: present
+  tags: [ksm, packages]
+
+- name: Stop conflicting KSM services
+  systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: no
+  loop:
+    - ksmtuned
+    - ksm
+  ignore_errors: yes
+  tags: [ksm, services]
+
+- name: Create KSM configuration directory
+  file:
+    path: /etc/ksm
+    state: directory
+    mode: '0755'
+  tags: [ksm, config]
+
+- name: Create optimized KSM configuration
+  template:
+    src: ksm.conf.j2
+    dest: /etc/ksm/ksm.conf
+    mode: '0644'
+  notify: restart ksm-optimization
+  tags: [ksm, config]
+
+- name: Create KSM optimization script
+  template:
+    src: ksm-optimization.sh.j2
+    dest: /usr/local/bin/ksm-optimization.sh
+    mode: '0755'
+  tags: [ksm, script]
+
+- name: Create KSM monitoring script
+  template:
+    src: ksm-monitor.sh.j2
+    dest: /usr/local/bin/ksm-monitor.sh
+    mode: '0755'
+  tags: [ksm, monitoring]
+
+- name: Create KSM optimization systemd service
+  template:
+    src: ksm-optimization.service.j2
+    dest: /etc/systemd/system/ksm-optimization.service
+    mode: '0644'
+  notify: 
+    - reload systemd
+    - restart ksm-optimization
+  tags: [ksm, systemd]
+
+- name: Create KSM monitoring systemd service
+  template:
+    src: ksm-monitor.service.j2
+    dest: /etc/systemd/system/ksm-monitor.service
+    mode: '0644'
+  notify: reload systemd
+  tags: [ksm, systemd]
+
+- name: Create KSM monitoring timer
+  template:
+    src: ksm-monitor.timer.j2
+    dest: /etc/systemd/system/ksm-monitor.timer
+    mode: '0644'
+  notify: reload systemd
+  tags: [ksm, systemd]
+
+- name: Enable and start KSM optimization service
+  systemd:
+    name: ksm-optimization
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  tags: [ksm, services]
+
+- name: Enable and start KSM monitoring timer
+  systemd:
+    name: ksm-monitor.timer
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  tags: [ksm, services]
+
+# Removed old KSM script cleanup from /root directory
+
+- name: Configure KSM kernel parameters
+  sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop:
+    - { key: "kernel.shmmax", value: "{{ (ansible_memtotal_mb * 1024 * 1024 * 0.75) | int }}" }
+    - { key: "kernel.shmall", value: "{{ (ansible_memtotal_mb * 1024 / 4) | int }}" }
+  tags: [ksm, kernel]

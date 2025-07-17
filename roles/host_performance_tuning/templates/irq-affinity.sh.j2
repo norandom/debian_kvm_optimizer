@@ -1,0 +1,42 @@
+#!/bin/bash
+# IRQ affinity optimization for virtualization host
+
+# Distribute IRQs across CPU cores for better performance
+# Reserve CPU 0 for system tasks, use others for IRQ handling
+
+PRIMARY_INTERFACE="{{ host_network.primary_interface | default('enp0s31f6') }}"
+
+# Function to set IRQ affinity
+set_irq_affinity() {
+    local irq=$1
+    local cpu=$2
+    local cpu_mask=$(printf "%x" $((1 << cpu)))
+    echo $cpu_mask > /proc/irq/$irq/smp_affinity
+}
+
+# Get IRQs for the primary network interface
+IRQS=$(grep $PRIMARY_INTERFACE /proc/interrupts | awk -F: '{print $1}' | tr -d ' ')
+
+# Distribute IRQs across CPUs 1-5 (leaving CPU 0 for system)
+cpu=1
+for irq in $IRQS; do
+    if [[ -f /proc/irq/$irq/smp_affinity ]]; then
+        set_irq_affinity $irq $cpu
+        echo "$(date): Set IRQ $irq to CPU $cpu" >> /var/log/irq-affinity.log
+        cpu=$((cpu + 1))
+        if [[ $cpu -gt 5 ]]; then
+            cpu=1
+        fi
+    fi
+done
+
+# Optimize storage controller IRQs
+STORAGE_IRQS=$(grep -E "(nvme|md)" /proc/interrupts | awk -F: '{print $1}' | tr -d ' ')
+for irq in $STORAGE_IRQS; do
+    if [[ -f /proc/irq/$irq/smp_affinity ]]; then
+        # Use CPUs 2-4 for storage IRQs
+        cpu=$((2 + (irq % 3)))
+        set_irq_affinity $irq $cpu
+        echo "$(date): Set storage IRQ $irq to CPU $cpu" >> /var/log/irq-affinity.log
+    fi
+done

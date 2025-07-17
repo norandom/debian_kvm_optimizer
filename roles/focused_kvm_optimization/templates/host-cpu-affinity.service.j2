@@ -1,0 +1,12 @@
+[Unit]
+Description=Set CPU affinity for host processes
+After=multi-user.target
+Wants=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/set-host-cpu-affinity.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

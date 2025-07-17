@@ -1,0 +1,11 @@
+---
+- name: update grub
+  command: update-grub
+
+- name: remount filesystems
+  command: mount -o remount {{ item }}
+  loop:
+    - /
+    - /home
+    - /virt
+  ignore_errors: yes

@@ -1,0 +1,14 @@
+[Unit]
+Description=KSM Optimization Service
+After=multi-user.target
+
+[Service]
+Type=forking
+ExecStart=/usr/local/bin/ksm-optimization.sh start
+ExecReload=/usr/local/bin/ksm-optimization.sh restart
+ExecStop=/usr/local/bin/ksm-optimization.sh stop
+RemainAfterExit=yes
+TimeoutSec=30
+
+[Install]
+WantedBy=multi-user.target

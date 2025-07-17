@@ -1,0 +1,19 @@
+#!/bin/bash
+# Network interface optimization script
+
+INTERFACE="{{ host_network.primary_interface | default('enp0s31f6') }}"
+
+# Only optimize the primary physical interface
+if [[ "$IFACE" == "$INTERFACE" ]]; then
+    # Increase ring buffers
+    ethtool -G $INTERFACE rx 4096 tx 4096 2>/dev/null || true
+    
+    # Enable hardware offloading
+    ethtool -K $INTERFACE gro on gso on tso on 2>/dev/null || true
+    
+    # Set interrupt coalescing
+    ethtool -C $INTERFACE adaptive-rx on adaptive-tx on 2>/dev/null || true
+    
+    # Log optimization
+    echo "$(date): Network optimization applied to $INTERFACE" >> /var/log/network-optimization.log
+fi

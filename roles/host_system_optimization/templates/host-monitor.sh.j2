@@ -1,0 +1,39 @@
+#!/bin/bash
+# Host system monitoring script
+
+LOG_FILE="/var/log/host-monitor.log"
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+# System load
+LOAD=$(uptime | awk -F'load average:' '{print $2}')
+
+# Memory usage
+MEM_USAGE=$(free | awk 'NR==2{printf "%.2f%%", $3*100/$2}')
+
+# Storage usage
+STORAGE_ROOT=$(df -h / | awk 'NR==2{print $5}')
+STORAGE_HOME=$(df -h /home | awk 'NR==2{print $5}')
+STORAGE_VIRT=$(df -h /virt | awk 'NR==2{print $5}')
+
+# CPU temperature (if available)
+CPU_TEMP=$(sensors 2>/dev/null | grep "Core 0" | awk '{print $3}' | head -1)
+
+# Log the metrics
+echo "[$TIMESTAMP] Load: $LOAD | Memory: $MEM_USAGE | Storage: / $STORAGE_ROOT, /home $STORAGE_HOME, /virt $STORAGE_VIRT | CPU Temp: $CPU_TEMP" >> $LOG_FILE
+
+# Alert on high usage
+ROOT_USAGE=$(echo $STORAGE_ROOT | tr -d '%')
+HOME_USAGE=$(echo $STORAGE_HOME | tr -d '%')
+VIRT_USAGE=$(echo $STORAGE_VIRT | tr -d '%')
+
+if [[ $ROOT_USAGE -gt {{ host_storage.usage_alert_threshold | default(90) }} ]]; then
+    echo "[$TIMESTAMP] ALERT: Root filesystem usage at $STORAGE_ROOT" >> $LOG_FILE
+fi
+
+if [[ $HOME_USAGE -gt {{ host_storage.usage_alert_threshold | default(90) }} ]]; then
+    echo "[$TIMESTAMP] ALERT: Home filesystem usage at $STORAGE_HOME" >> $LOG_FILE
+fi
+
+if [[ $VIRT_USAGE -gt {{ host_storage.usage_alert_threshold | default(90) }} ]]; then
+    echo "[$TIMESTAMP] ALERT: Virt filesystem usage at $STORAGE_VIRT" >> $LOG_FILE
+fi

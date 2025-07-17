@@ -1,0 +1,27 @@
+---
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: apply firewall rules
+  command: /etc/network/host-optimization/firewall-rules.sh
+  ignore_errors: yes
+
+- name: apply nat config
+  command: /etc/network/host-optimization/nat-config.sh
+  ignore_errors: yes
+
+- name: apply network tuning
+  command: /etc/network/host-optimization/network-tuning.sh
+  ignore_errors: yes
+
+- name: enable network setup
+  systemd:
+    name: network-setup
+    enabled: yes
+    state: started
+
+- name: save iptables rules
+  shell: |
+    iptables-save > /etc/iptables/rules.v4
+    ip6tables-save > /etc/iptables/rules.v6

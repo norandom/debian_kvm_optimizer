@@ -1,0 +1,9 @@
+[Unit]
+Description=KSM Monitoring Service
+After=ksm-optimization.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/ksm-monitor.sh
+User=root
+Group=root

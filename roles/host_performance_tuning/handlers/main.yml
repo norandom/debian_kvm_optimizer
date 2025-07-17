@@ -1,0 +1,16 @@
+---
+- name: update grub
+  command: update-grub
+  
+- name: apply sysctl
+  command: sysctl --system
+  
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+    
+- name: enable irq affinity
+  systemd:
+    name: irq-affinity
+    enabled: yes
+    state: started

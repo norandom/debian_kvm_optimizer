@@ -1,0 +1,79 @@
+#!/bin/bash
+# Storage monitoring and health check script
+
+LOG_FILE="/var/log/storage-monitor.log"
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+echo "[$TIMESTAMP] Starting storage health check" >> $LOG_FILE
+
+# Check RAID status
+echo "=== RAID Status ===" >> $LOG_FILE
+cat /proc/mdstat >> $LOG_FILE 2>&1
+
+# Check NVMe health
+echo "=== NVMe Health ===" >> $LOG_FILE
+for nvme in /dev/nvme*n1; do
+    if [[ -e $nvme ]]; then
+        echo "Device: $nvme" >> $LOG_FILE
+        nvme smart-log $nvme >> $LOG_FILE 2>&1
+    fi
+done
+
+# Check disk usage
+echo "=== Disk Usage ===" >> $LOG_FILE
+df -h >> $LOG_FILE
+
+# Check for filesystem errors
+echo "=== Filesystem Check ===" >> $LOG_FILE
+dmesg | grep -i "error\|corrupt\|fail" | tail -10 >> $LOG_FILE
+
+# Check SMART status - Enhanced monitoring
+echo "=== SMART Status ===" >> $LOG_FILE
+for disk in /dev/sd* /dev/nvme*; do
+    if [[ -e $disk ]] && [[ $disk != *[0-9] ]] && [[ $disk != *p[0-9] ]]; then
+        echo "Device: $disk" >> $LOG_FILE
+        # Basic health check
+        smartctl -H $disk >> $LOG_FILE 2>&1
+        
+        # Get detailed attributes for SATA/SAS drives
+        if [[ $disk == /dev/sd* ]]; then
+            echo "-- Critical Attributes for $disk --" >> $LOG_FILE
+            smartctl -A $disk | grep -E "Reallocated_Sector_Ct|Current_Pending_Sector|Offline_Uncorrectable|Temperature_Celsius|Wear_Leveling_Count|Media_Wearout_Indicator" >> $LOG_FILE 2>&1
+        fi
+        
+        # Get NVMe specific info
+        if [[ $disk == /dev/nvme* ]]; then
+            echo "-- NVMe Health Info for $disk --" >> $LOG_FILE
+            nvme smart-log $disk | grep -E "temperature|available_spare|percentage_used|data_units_read|data_units_written|critical_warning" >> $LOG_FILE 2>&1
+        fi
+        
+        # Check for critical warnings
+        SMART_HEALTH=$(smartctl -H $disk 2>/dev/null | grep -E "PASSED|FAILED|OK")
+        if [[ $SMART_HEALTH == *"FAILED"* ]]; then
+            echo "[$TIMESTAMP] CRITICAL: SMART health check FAILED for $disk!" >> $LOG_FILE
+        fi
+    fi
+done
+
+# Check storage performance
+echo "=== Storage Performance ===" >> $LOG_FILE
+iostat -x 1 3 >> $LOG_FILE
+
+# Alert on high usage
+ROOT_USAGE=$(df / | awk 'NR==2{print $5}' | tr -d '%')
+HOME_USAGE=$(df /home | awk 'NR==2{print $5}' | tr -d '%')
+VIRT_USAGE=$(df /virt | awk 'NR==2{print $5}' | tr -d '%')
+
+if [[ $ROOT_USAGE -gt {{ host_storage.usage_alert_threshold | default(90) }} ]]; then
+    echo "[$TIMESTAMP] CRITICAL: Root filesystem usage at ${ROOT_USAGE}%" >> $LOG_FILE
+fi
+
+if [[ $HOME_USAGE -gt {{ host_storage.usage_alert_threshold | default(90) }} ]]; then
+    echo "[$TIMESTAMP] CRITICAL: Home filesystem usage at ${HOME_USAGE}%" >> $LOG_FILE
+fi
+
+if [[ $VIRT_USAGE -gt {{ host_storage.usage_alert_threshold | default(90) }} ]]; then
+    echo "[$TIMESTAMP] CRITICAL: Virt filesystem usage at ${VIRT_USAGE}%" >> $LOG_FILE
+fi
+
+echo "[$TIMESTAMP] Storage health check completed" >> $LOG_FILE

@@ -1,0 +1,56 @@
+---
+# Network interface configuration
+network_interfaces:
+  primary: "eno1"
+  bridge: "virbr0"
+
+# VM network configuration
+vm_network:
+  subnet: "192.168.122.0/24"
+  gateway: "192.168.122.1"
+  
+# Port forwarding configuration (based on current setup)
+port_forwards:
+  - name: "SSH to VM"
+    host_port: 2223
+    guest_ip: "192.168.122.147"
+    guest_port: 22
+    protocol: tcp
+    interface: "eno1"
+    
+  - name: "BitTorrent client"
+    host_port: 51413
+    guest_ip: "192.168.122.147"
+    guest_port: 51413
+    protocol: tcp
+    interface: "*"
+    
+  - name: "BitTorrent range"
+    host_port_range: "6881:6889"
+    guest_ip: "192.168.122.147"
+    guest_port: 51413
+    protocol: tcp
+    interface: "*"
+
+# Firewall configuration
+firewall_rules:
+  # Block DNS requests to prevent DNS leaks
+  block_dns:
+    - { interface: "eno1", port: 53, protocol: "tcp" }
+    - { interface: "eno1", port: 53, protocol: "udp" }
+    
+  # Block DHCP requests
+  block_dhcp:
+    - { interface: "eno1", port: 67, protocol: "tcp" }
+    - { interface: "eno1", port: 67, protocol: "udp" }
+
+# Network optimization settings
+network_optimization:
+  tcp_congestion_control: "bbr"
+  rmem_max: 16777216
+  wmem_max: 16777216
+  tcp_rmem: "4096 87380 16777216"
+  tcp_wmem: "4096 65536 16777216"
+  arp_filter: 1
+  disable_tso: true
+  disable_gso: true

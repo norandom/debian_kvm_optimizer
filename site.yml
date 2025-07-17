@@ -1,0 +1,73 @@
+---
+- name: Host System Optimization
+  hosts: localhost
+  connection: local
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    optimization_level: "balanced"  # conservative, balanced, aggressive
+    enable_monitoring: true
+    backup_configs: true
+    project_name: "{{ ansible_env.PROJECT_NAME | default('host-optimization') }}"
+    
+  pre_tasks:
+    - name: Create backup directory
+      file:
+        path: /root/ansible-backups
+        state: directory
+        mode: '0700'
+      when: backup_configs
+
+    - name: Log optimization run
+      lineinfile:
+        path: "/var/log/{{ project_name }}.log"
+        line: "{{ ansible_date_time.iso8601 }} - Starting {{ project_name }} ({{ optimization_level }})"
+        create: yes
+        mode: '0644'
+
+  roles:
+    - role: host_system_optimization
+      tags: [system, core]
+      
+    - role: host_performance_tuning
+      tags: [performance, kernel]
+      
+    - role: host_storage_optimization
+      tags: [storage, filesystem]
+      
+    - role: ksm_optimization
+      tags: [ksm, memory]
+      
+    - role: network_nat_persistence
+      tags: [network, nat, firewall]
+      
+    - role: focused_kvm_optimization
+      tags: [kvm, focused, optimization]
+
+  post_tasks:
+    - name: Log optimization completion
+      lineinfile:
+        path: "/var/log/{{ project_name }}.log"
+        line: "{{ ansible_date_time.iso8601 }} - Optimization completed successfully"
+
+    - name: Restart critical services if needed
+      systemd:
+        name: "{{ item }}"
+        state: restarted
+      loop:
+        - libvirtd
+        - systemd-networkd
+      when: ansible_services_restart_required | default(false)
+
+    - name: Display optimization summary
+      debug:
+        msg: |
+          {{ project_name | title }} Summary:
+          - Optimization Level: {{ optimization_level }}
+          - VMs Currently Running: {{ ansible_libvirt_vms | default([]) | length }}
+          - System Load: {{ ansible_loadavg.1min }}
+          - Available Memory: {{ ansible_memfree_mb }}MB
+          - Storage Usage: {{ ansible_mounts | selectattr('mount', 'equalto', '/') | map(attribute='size_total') | first | filesizeformat }}
+          - KSM Status: {{ ansible_ksm_status | default('Unknown') }}
+          - NAT Rules Applied: {{ ansible_nat_rules_count | default('Unknown') }}

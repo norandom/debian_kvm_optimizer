@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Ansible Pull every 30 minutes
+Requires=ansible-pull.service
+
+[Timer]
+OnCalendar=*:0/30
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

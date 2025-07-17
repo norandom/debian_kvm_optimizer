@@ -1,0 +1,17 @@
+---
+- name: update grub
+  command: update-grub
+  notify: reboot required
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: restart libvirtd
+  systemd:
+    name: libvirtd
+    state: restarted
+
+- name: reboot required
+  debug:
+    msg: "REBOOT REQUIRED for CPU isolation to take effect"

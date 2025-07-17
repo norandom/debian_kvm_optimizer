@@ -1,0 +1,184 @@
+---
+# Advanced KVM Host Optimizations for Production Environment
+
+- name: Create advanced optimization directory
+  file:
+    path: /etc/kvm-optimization
+    state: directory
+    mode: '0755'
+  tags: [setup]
+
+- name: Install I/O monitoring tools
+  apt:
+    name:
+      - sysstat
+      - iotop
+      - fio
+      - blktrace
+    state: present
+  tags: [packages, io]
+
+# Advanced I/O Optimization
+- name: Set I/O scheduler for VM storage devices
+  lineinfile:
+    path: /etc/udev/rules.d/60-kvm-io-scheduler.rules
+    line: 'ACTION=="add|change", KERNEL=="nvme[0-9]n[0-9]", ATTR{queue/scheduler}="none"'
+    create: yes
+    mode: '0644'
+  tags: [io, nvme]
+
+- name: Set I/O scheduler for RAID devices
+  lineinfile:
+    path: /etc/udev/rules.d/60-kvm-io-scheduler.rules
+    line: 'ACTION=="add|change", KERNEL=="md[0-9]", ATTR{queue/scheduler}="kyber"'
+    create: yes
+    mode: '0644'
+  tags: [io, raid]
+
+- name: Configure I/O queue depths for NVMe
+  sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop:
+    - { key: "vm.dirty_bytes", value: "268435456" }  # 256MB
+    - { key: "vm.dirty_background_bytes", value: "134217728" }  # 128MB
+    - { key: "vm.dirty_expire_centisecs", value: "1000" }  # 10 seconds
+    - { key: "vm.dirty_writeback_centisecs", value: "100" }   # 1 second
+  tags: [io, memory]
+
+# Critical Swap Optimization
+- name: Emergency swap pressure relief
+  sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop:
+    - { key: "vm.swappiness", value: "1" }  # Reduce to minimum
+    - { key: "vm.watermark_boost_factor", value: "0" }  # Disable watermark boosting
+    - { key: "vm.watermark_scale_factor", value: "50" }  # Reduce memory pressure threshold
+  tags: [swap, memory]
+
+# Disk Space Monitoring
+- name: Create disk space monitoring script
+  template:
+    src: disk-space-monitor.sh.j2
+    dest: /usr/local/bin/disk-space-monitor.sh
+    mode: '0755'
+  tags: [monitoring, storage]
+
+- name: Schedule critical disk space monitoring
+  cron:
+    name: "Critical disk space monitoring"
+    minute: "*/1"  # Every minute for critical /home
+    job: "/usr/local/bin/disk-space-monitor.sh"
+    user: root
+  tags: [monitoring, storage, cron]
+
+# CPU Affinity for Host Processes
+- name: Configure CPU isolation for VMs
+  lineinfile:
+    path: /etc/default/grub
+    regexp: '^GRUB_CMDLINE_LINUX='
+    line: 'GRUB_CMDLINE_LINUX="quiet splash intel_pstate=disable processor.max_cstate=1 intel_idle.max_cstate=0 mitigations=off zswap.enabled=1 zswap.compressor=lz4 isolcpus=2-11 rcu_nocbs=2-11 nohz_full=2-11"'
+    backup: yes
+  notify: update grub
+  tags: [cpu, isolation]
+
+# LibVirt/QEMU Host Optimizations
+- name: Configure libvirt for performance
+  template:
+    src: libvirtd.conf.j2
+    dest: /etc/libvirt/libvirtd.conf
+    backup: yes
+    mode: '0644'
+  notify: restart libvirtd
+  tags: [libvirt]
+
+- name: Configure QEMU for performance
+  template:
+    src: qemu.conf.j2
+    dest: /etc/libvirt/qemu.conf
+    backup: yes
+    mode: '0644'
+  notify: restart libvirtd
+  tags: [qemu]
+
+# Memory Ballooning Optimization
+- name: Configure memory ballooning sysctl
+  sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop:
+    - { key: "vm.overcommit_memory", value: "1" }  # Always overcommit
+    - { key: "vm.overcommit_ratio", value: "150" }  # 150% overcommit
+    - { key: "vm.memory_failure_early_kill", value: "1" }  # Kill early on memory failure
+  tags: [memory, ballooning]
+
+# Advanced Network Optimizations for VMs
+- name: Configure bridge optimization
+  sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop:
+    - { key: "net.bridge.bridge-nf-call-iptables", value: "0" }  # Disable for performance
+    - { key: "net.bridge.bridge-nf-call-ip6tables", value: "0" }
+    - { key: "net.bridge.bridge-nf-call-arptables", value: "0" }
+  tags: [network, bridge]
+
+# Storage Cleanup Automation
+- name: Create automated storage cleanup
+  template:
+    src: emergency-cleanup.sh.j2
+    dest: /usr/local/bin/emergency-cleanup.sh
+    mode: '0755'
+  tags: [storage, cleanup]
+
+- name: Schedule emergency cleanup when disk > 95%
+  cron:
+    name: "Emergency storage cleanup"
+    minute: "*/5"
+    job: "/usr/local/bin/emergency-cleanup.sh"
+    user: root
+  tags: [storage, cleanup, cron]
+
+# NUMA optimization for VMs
+- name: Configure NUMA balancing
+  sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop:
+    - { key: "kernel.numa_balancing", value: "0" }  # Disable auto-balancing
+    - { key: "vm.zone_reclaim_mode", value: "0" }   # Disable zone reclaim
+  tags: [numa, memory]
+
+# Advanced KSM tuning for high VM density
+- name: Configure advanced KSM parameters
+  template:
+    src: ksm-advanced.conf.j2
+    dest: /etc/ksm/ksm-advanced.conf
+    mode: '0644'
+  tags: [ksm, memory]
+
+- name: Create KSM performance monitoring
+  template:
+    src: ksm-performance-monitor.sh.j2
+    dest: /usr/local/bin/ksm-performance-monitor.sh
+    mode: '0755'
+  tags: [ksm, monitoring]
+
+- name: Schedule KSM performance monitoring
+  cron:
+    name: "KSM performance monitoring"
+    minute: "*/2"
+    job: "/usr/local/bin/ksm-performance-monitor.sh"
+    user: root
+  tags: [ksm, monitoring, cron]

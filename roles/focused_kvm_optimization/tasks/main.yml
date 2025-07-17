@@ -1,0 +1,127 @@
+---
+# Focused KVM Host Optimizations
+
+- name: Create focused optimization directory
+  file:
+    path: /etc/kvm-focused
+    state: directory
+    mode: '0755'
+  tags: [setup]
+
+# 1. Fix High Swap Usage (3.1GB used with 21GB RAM free)
+- name: Emergency swap optimization
+  sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop:
+    - { key: "vm.swappiness", value: "1" }  # Minimum swap usage
+    - { key: "vm.watermark_boost_factor", value: "0" }  # Disable watermark boosting
+    - { key: "vm.watermark_scale_factor", value: "10" }  # Aggressive memory reclaim
+    - { key: "vm.vfs_cache_pressure", value: "50" }  # Reduce cache pressure
+    - { key: "vm.min_free_kbytes", value: "262144" }  # 256MB minimum free (2x current)
+  tags: [swap, memory]
+
+- name: Configure memory overcommit for VMs
+  sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop:
+    - { key: "vm.overcommit_memory", value: "1" }  # Always overcommit
+    - { key: "vm.overcommit_ratio", value: "120" }  # 120% overcommit ratio
+    - { key: "vm.oom_kill_allocating_task", value: "1" }  # Kill allocating task on OOM
+  tags: [memory, overcommit]
+
+# 3. CPU Optimization - Host gets core 0, VMs get cores 1-11
+- name: Configure CPU isolation for KVM host
+  lineinfile:
+    path: /etc/default/grub
+    regexp: '^GRUB_CMDLINE_LINUX='
+    line: 'GRUB_CMDLINE_LINUX="quiet splash intel_pstate=disable processor.max_cstate=1 intel_idle.max_cstate=0 mitigations=off zswap.enabled=1 zswap.compressor=lz4 isolcpus=1-11 rcu_nocbs=1-11 nohz_full=1-11"'
+    backup: yes
+  notify: update grub
+  tags: [cpu, isolation]
+
+- name: Set CPU affinity for host processes
+  template:
+    src: host-cpu-affinity.service.j2
+    dest: /etc/systemd/system/host-cpu-affinity.service
+    mode: '0644'
+  notify: reload systemd
+  tags: [cpu, affinity]
+
+- name: Enable host CPU affinity service
+  systemd:
+    name: host-cpu-affinity
+    enabled: yes
+    state: started
+  tags: [cpu, affinity]
+
+# 4. libvirt/QEMU Host Optimizations
+- name: Configure libvirt for high VM density
+  template:
+    src: libvirtd.conf.j2
+    dest: /etc/libvirt/libvirtd.conf
+    backup: yes
+    mode: '0644'
+  notify: restart libvirtd
+  tags: [libvirt]
+
+- name: Configure QEMU for performance
+  template:
+    src: qemu.conf.j2
+    dest: /etc/libvirt/qemu.conf
+    backup: yes
+    mode: '0644'
+  notify: restart libvirtd
+  tags: [qemu]
+
+- name: Configure memory ballooning for VMs
+  template:
+    src: vm-memory-ballooning.sh.j2
+    dest: /usr/local/bin/vm-memory-ballooning.sh
+    mode: '0755'
+  tags: [memory, ballooning]
+
+- name: Schedule VM memory ballooning
+  cron:
+    name: "VM memory ballooning optimization"
+    minute: "*/3"
+    job: "/usr/local/bin/vm-memory-ballooning.sh"
+    user: root
+  tags: [memory, ballooning, cron]
+
+- name: Create VM performance monitoring
+  template:
+    src: vm-performance-monitor.sh.j2
+    dest: /usr/local/bin/vm-performance-monitor.sh
+    mode: '0755'
+  tags: [monitoring, performance]
+
+- name: Schedule VM performance monitoring
+  cron:
+    name: "VM performance monitoring"
+    minute: "*/5"
+    job: "/usr/local/bin/vm-performance-monitor.sh"
+    user: root
+  tags: [monitoring, performance, cron]
+
+# Additional memory optimizations
+- name: Configure transparent huge pages for KVM
+  lineinfile:
+    path: /etc/rc.local
+    line: 'echo madvise > /sys/kernel/mm/transparent_hugepage/enabled'
+    create: yes
+    mode: '0755'
+  tags: [memory, hugepages]
+
+- name: Configure KSM for high VM density
+  lineinfile:
+    path: /etc/rc.local
+    line: 'echo 1 > /sys/kernel/mm/ksm/run'
+    create: yes
+    mode: '0755'
+  tags: [memory, ksm]

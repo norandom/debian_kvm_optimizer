@@ -1,0 +1,13 @@
+[Unit]
+Description=Network Setup for KVM Host
+After=network.target libvirtd.service
+Wants=libvirtd.service
+
+[Service]
+Type=oneshot
+ExecStart=/etc/network/host-optimization/network-setup.sh
+RemainAfterExit=yes
+TimeoutSec=60
+
+[Install]
+WantedBy=multi-user.target

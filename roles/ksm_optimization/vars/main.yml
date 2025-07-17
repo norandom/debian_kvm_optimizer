@@ -1,0 +1,27 @@
+---
+# KSM Configuration for high VM density host
+ksm_config:
+  # Enable KSM
+  run: 1
+  
+  # Zero page merging (important for VMs)
+  use_zero_pages: 1
+  
+  # Cross-NUMA merging
+  merge_across_nodes: 1
+  
+  # Maximum page sharing (increased for high VM density)
+  max_page_sharing: 1000
+  
+  # Scanning parameters (balanced for CPU usage)
+  sleep_millisecs: 100
+  pages_to_scan: 5000
+  
+  # Stable node chain pruning
+  stable_node_chains_prune_millisecs: 5
+
+# Monitoring thresholds
+ksm_thresholds:
+  memory_usage_threshold: 90
+  sharing_ratio_threshold: 10
+  scan_efficiency_threshold: 50
