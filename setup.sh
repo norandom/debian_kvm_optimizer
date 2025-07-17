@@ -93,6 +93,9 @@ chmod -R 755 $INSTALL_DIR
 echo "Setting up systemd service..." | tee -a $LOG_FILE
 
 # Create service file
+# Calculate delay in seconds
+DELAY_SECONDS=$((${ANSIBLE_PULL_RANDOM_DELAY%min} * 60))
+
 cat > /etc/systemd/system/${SERVICE_NAME}.service << EOF
 [Unit]
 Description=Ansible Pull for ${PROJECT_NAME}
@@ -103,7 +106,7 @@ Type=oneshot
 User=${ANSIBLE_PULL_USER}
 Group=${ANSIBLE_PULL_USER}
 WorkingDirectory=${ANSIBLE_PULL_CHECKOUT_DIR}
-ExecStartPre=/bin/sleep \$((RANDOM % ${ANSIBLE_PULL_RANDOM_DELAY%min} * 60))
+ExecStartPre=/bin/sleep \$((RANDOM % ${DELAY_SECONDS}))
 ExecStart=/usr/bin/ansible-pull -U ${REPO_URL} -i ${ANSIBLE_PULL_INVENTORY} ${ANSIBLE_PULL_PLAYBOOK}
 TimeoutSec=1800
 StandardOutput=journal
