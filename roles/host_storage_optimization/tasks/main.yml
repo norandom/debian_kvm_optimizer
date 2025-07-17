@@ -85,6 +85,7 @@
     value: "{{ host_optimization.swappiness | default(10) }}"
     state: present
     reload: yes
+  ignore_errors: yes  # Parameter may not exist on all kernel versions
   tags: [swap, memory]
 
 # GRUB configuration moved to host_performance_tuning role to avoid conflicts
