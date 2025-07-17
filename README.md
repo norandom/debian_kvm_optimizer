@@ -60,12 +60,12 @@ This playbook optimizes the **host OS only** for running KVM virtual machines on
 
 1. **Upload to host**:
 ```bash
-scp -r . root@168.119.70.54:/tmp/kvm-host-optimization/
+scp -r . root@YOUR_HOST_IP:/tmp/kvm-host-optimization/
 ```
 
 2. **Run setup on host**:
 ```bash
-ssh root@168.119.70.54
+ssh root@YOUR_HOST_IP
 cd /tmp/kvm-host-optimization
 ./setup.sh
 ```
