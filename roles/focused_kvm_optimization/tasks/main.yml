@@ -21,6 +21,7 @@
     - { key: "vm.watermark_scale_factor", value: "10" }  # Aggressive memory reclaim
     - { key: "vm.vfs_cache_pressure", value: "50" }  # Reduce cache pressure
     - { key: "vm.min_free_kbytes", value: "262144" }  # 256MB minimum free (2x current)
+  ignore_errors: yes  # Some parameters may not exist on all kernel versions
   tags: [swap, memory]
 
 - name: Configure memory overcommit for VMs
@@ -33,6 +34,7 @@
     - { key: "vm.overcommit_memory", value: "1" }  # Always overcommit
     - { key: "vm.overcommit_ratio", value: "120" }  # 120% overcommit ratio
     - { key: "vm.oom_kill_allocating_task", value: "1" }  # Kill allocating task on OOM
+  ignore_errors: yes  # Some parameters may not exist on all kernel versions
   tags: [memory, overcommit]
 
 # 3. CPU Optimization - Host gets core 0, VMs get cores 1-11

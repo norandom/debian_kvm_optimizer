@@ -136,6 +136,7 @@
     - { key: "vm.watermark_scale_factor", value: "200" }
     - { key: "vm.zone_reclaim_mode", value: "0" }
     - { key: "vm.page-cluster", value: "0" }
+  ignore_errors: yes  # Some parameters may not exist on all kernel versions
   tags: [memory, performance, swap]
 
 - name: Create BitTorrent traffic monitoring script

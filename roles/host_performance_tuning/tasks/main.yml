@@ -6,6 +6,7 @@
     state: present
     reload: yes
   loop: "{{ kernel_params }}"
+  ignore_errors: yes  # Some parameters may not exist on all kernel versions
   tags: [kernel, sysctl]
 
 - name: Configure additional performance kernel parameters
@@ -22,6 +23,7 @@
     - { key: "net.core.netdev_max_backlog", value: "5000" }
     - { key: "vm.min_free_kbytes", value: "65536" }
     - { key: "vm.zone_reclaim_mode", value: "0" }
+  ignore_errors: yes  # Some parameters may not exist on all kernel versions
   tags: [kernel, network, memory]
 
 - name: Configure I/O scheduler for different storage devices
@@ -134,4 +136,5 @@
     - { key: "net.netfilter.nf_conntrack_buckets", value: "262144" }
     - { key: "net.netfilter.nf_conntrack_tcp_timeout_fin_wait", value: "30" }
     - { key: "net.netfilter.nf_conntrack_tcp_timeout_last_ack", value: "30" }
+  ignore_errors: yes  # Netfilter modules may not be loaded
   tags: [network, conntrack, bittorrent]

@@ -83,6 +83,7 @@
     - { key: "net.bridge.bridge-nf-call-iptables", value: "1" }
     - { key: "net.bridge.bridge-nf-call-ip6tables", value: "1" }
     - { key: "net.bridge.bridge-nf-call-arptables", value: "1" }
+  ignore_errors: yes  # Bridge module may not be loaded
   tags: [network, bridge]
 
 # Removed old network script cleanup from /root directory
