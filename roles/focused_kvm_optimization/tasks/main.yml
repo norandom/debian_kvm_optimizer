@@ -79,7 +79,7 @@
   notify: restart libvirtd
   tags: [libvirt]
 
-- name: Configure QEMU for performance
+- name: Configure QEMU for focused KVM performance
   template:
     src: qemu.conf.j2
     dest: /etc/libvirt/qemu.conf
