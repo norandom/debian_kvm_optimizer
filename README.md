@@ -2,6 +2,17 @@
 
 Automated optimization for Debian Bookworm KVM virtualization hosts using Ansible pull methodology.
 
+>   Memory Optimization Results:
+>
+>  - Total allocated VM memory: 107GB across 12 VMs
+>  - Actual memory used: 50GB
+>  - Memory ballooning savings: ~57GB (53% efficiency)
+>  - KSM deduplication: ~1.6GB additional savings
+>  - Combined optimization: 58.6GB total memory saved
+>
+>  This demonstrates that KSM + Memory Ballooning provides container-like density while maintaining full VM security isolation - a compelling alternative to Docker for
+>  mixed workload environments with Windows/Linux VMs.
+
 ## Overview
 
 This playbook optimizes the **host OS only** for running KVM virtual machines on Debian Bookworm. It focuses on system-level optimizations without touching VM configurations.
@@ -13,7 +24,6 @@ This playbook optimizes the **host OS only** for running KVM virtual machines on
 - **Memory**: 125GB
 - **Storage**: 
   - 2TB root (RAID)
-  - 5.3TB /home (RAID) - 98% full
   - 938GB /virt (NVMe)
 
 ## Optimizations Applied
@@ -28,7 +38,7 @@ This playbook optimizes the **host OS only** for running KVM virtual machines on
 
 ### Performance Tuning
 - Kernel parameter optimization for virtualization
-- Network stack tuning
+- Network stack tuning (incl. Intel power management)
 - I/O scheduler optimization per storage type
 - Memory management tuning
 - NUMA balancing disabled for VMs
@@ -44,39 +54,42 @@ This playbook optimizes the **host OS only** for running KVM virtual machines on
 
 ### KSM & Memory Ballooning Optimization
 - **KSM (Kernel Same-page Merging)**: Aggressive memory deduplication for 12+ VMs
-- **Memory Ballooning**: Dynamic memory allocation saving ~57GB (107GB allocated → 50GB used) (*Linux VMs only - not supported by Windows 11*)
+- **Memory Ballooning**: Dynamic memory allocation; saving ~57GB (107GB allocated → 50GB used) (*Linux VMs only - not supported by Windows (Server)*)
 - **Security-focused alternative to Docker**: Provides similar consolidation efficiency with better isolation
 - **Mixed workload efficiency**: Windows/Linux VMs coexist with optimized resource sharing
-- Replaces broken ksmtuned service with intelligent adaptive scanning
+- Replaces (broken) ksmtuned service with intelligent adaptive scanning
 - Cross-NUMA and zero-page merging for maximum memory efficiency
-- Real-time monitoring and auto-optimization every 3-5 minutes
+- Monitoring and auto-optimization every 3-5 minutes
 
 #### Why KSM+Ballooning vs Docker?
-- **Better security isolation**: Full VM boundaries vs shared kernel
+- **Better security isolation**: Full VM boundaries 
 - **Mixed OS support**: Run Windows, Linux, different distros simultaneously  
 - **Enterprise workloads**: Database VMs, legacy applications, compliance requirements
 - **Memory efficiency**: ~1.6GB deduplicated via KSM + ~57GB saved via ballooning (107GB allocated, 50GB used)
 - **Resource flexibility**: Dynamic CPU/memory allocation without container limitations
 
 ### Network NAT Persistence
-- Consolidates and persists existing NAT rules
-- Port forwarding: SSH (2223), BitTorrent (51413, 6881-6889)
-- DNS/DHCP leak prevention on external interface
+- Consolidates and persists existing NAT rules (NAT for qemu-kvm guests)
+- Port forwarding: SSH (2223), BitTorrent (51413, 6881-6889) etc.
+- DNS/DHCP leak prevention on external interface (libvirt services)
 - BBR congestion control and buffer optimization
 - Automated rule persistence and monitoring
 
 ## Quick Start
 
+**Fork and adapt** (!) - I don't maintain your systems. I maintain mine.
+This is a Git-Ops style pull workflow (!).
+
 1. **Run setup on host**:
 ```bash
-ssh root@YOUR_HOST_IP
+ssh root@$MY_HOST_IP
 curl -O https://raw.githubusercontent.com/norandom/debian_kvm_optimizer/main/setup.sh
 chmod +x setup.sh
 ./setup.sh
 ```
 
 The setup script will:
-- Prompt for your repository URL
+- Prompt for your repository URL *(!)*
 - Install Ansible and required packages
 - Set up the ansible-pull service to automatically pull from your repository
 - Run the initial optimization
@@ -119,9 +132,9 @@ tail -f /var/log/Debian_KVM_Optimization.log
 
 - **Host-only optimization**: No VM configuration changes
 - **Storage monitoring**: Critical alerts for 98% /home usage
-- **Performance tuning**: Optimized for 12 concurrent VMs
-- **KSM memory deduplication**: Replaces broken ksmtuned service
-- **Network NAT persistence**: Consolidates and persists existing rules
+- **Performance tuning**: Optimized for 12+ concurrent VMs
+- **KSM memory deduplication**: Replaces ksmtuned service
+- **Network NAT persistence**: Consolidates and persists existing Netfilter rules
 - **Automated cleanup**: Weekly maintenance tasks
 - **Health monitoring**: Storage, CPU, memory, KSM, and network metrics
 - **Log management**: Rotation and retention policies
@@ -140,7 +153,7 @@ ansible-playbook -i inventory/hosts.yml site.yml --tags="network"
 # Check KSM status
 /usr/local/bin/ksm-optimization.sh stats
 
-# Check network NAT rules
+# Check network NAT rules for the guest systems
 iptables -t nat -L -n -v
 
 # View recent optimizations
@@ -175,3 +188,4 @@ Edit `inventory/hosts.yml` to adjust:
 - Configuration stored in `/opt/kvm-host-optimization`
 - Logs rotated automatically
 - No external dependencies beyond system packages
+- Commits are signed here
