@@ -66,10 +66,7 @@ bridge_status
 port_forward_check
 network_performance
 
-# Alert on issues
-if ! systemctl is-active --quiet network-setup; then
-    echo "[$TIMESTAMP] ALERT: network-setup service is not active" >> $LOG_FILE
-fi
+# Alert on issues - network-setup alert removed (service intentionally disabled)
 
 if ! systemctl is-active --quiet netfilter-persistent; then
     echo "[$TIMESTAMP] ALERT: netfilter-persistent service is not active" >> $LOG_FILE
