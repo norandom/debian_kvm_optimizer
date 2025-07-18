@@ -48,18 +48,8 @@
     - { key: "vm.dirty_writeback_centisecs", value: "100" }   # 1 second
   tags: [io, memory]
 
-# Critical Swap Optimization
-- name: Emergency swap pressure relief
-  sysctl:
-    name: "{{ item.key }}"
-    value: "{{ item.value }}"
-    state: present
-    reload: yes
-  loop:
-    - { key: "vm.swappiness", value: "1" }  # Reduce to minimum
-    - { key: "vm.watermark_boost_factor", value: "0" }  # Disable watermark boosting
-    - { key: "vm.watermark_scale_factor", value: "50" }  # Reduce memory pressure threshold
-  tags: [swap, memory]
+# Critical Swap Optimization - duplicates removed, handled by focused_kvm_optimization
+# - vm.swappiness, vm.watermark_boost_factor, vm.watermark_scale_factor moved to focused_kvm_optimization role
 
 # Disk Space Monitoring
 - name: Create disk space monitoring script
@@ -107,15 +97,15 @@
   tags: [qemu]
 
 # Memory Ballooning Optimization
-- name: Configure memory ballooning sysctl
+# Memory ballooning sysctl - duplicates removed, handled by focused_kvm_optimization
+# - vm.overcommit_memory, vm.overcommit_ratio moved to focused_kvm_optimization role
+- name: Configure memory failure handling
   sysctl:
     name: "{{ item.key }}"
     value: "{{ item.value }}"
     state: present
     reload: yes
   loop:
-    - { key: "vm.overcommit_memory", value: "1" }  # Always overcommit
-    - { key: "vm.overcommit_ratio", value: "150" }  # 150% overcommit
     - { key: "vm.memory_failure_early_kill", value: "1" }  # Kill early on memory failure
   tags: [memory, ballooning]
 

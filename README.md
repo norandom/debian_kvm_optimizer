@@ -42,12 +42,21 @@ This playbook optimizes the **host OS only** for running KVM virtual machines on
 - Dirty page writeback tuning
 - Automated cleanup and monitoring
 
-### KSM Optimization
-- Replaces broken ksmtuned service
-- Aggressive memory deduplication for 12 VMs
-- Adaptive scanning based on memory pressure
-- Monitoring and auto-optimization every 5 minutes
-- Cross-NUMA and zero-page merging enabled
+### KSM & Memory Ballooning Optimization
+- **KSM (Kernel Same-page Merging)**: Aggressive memory deduplication for 12+ VMs
+- **Memory Ballooning**: Dynamic memory allocation between VMs and host (*Linux VMs only - not supported by Windows 11*)
+- **Security-focused alternative to Docker**: Provides similar consolidation efficiency with better isolation
+- **Mixed workload efficiency**: Windows/Linux VMs coexist with optimized resource sharing
+- Replaces broken ksmtuned service with intelligent adaptive scanning
+- Cross-NUMA and zero-page merging for maximum memory efficiency
+- Real-time monitoring and auto-optimization every 3-5 minutes
+
+#### Why KSM+Ballooning vs Docker?
+- **Better security isolation**: Full VM boundaries vs shared kernel
+- **Mixed OS support**: Run Windows, Linux, different distros simultaneously  
+- **Enterprise workloads**: Database VMs, legacy applications, compliance requirements
+- **Memory efficiency**: ~1.6GB deduplicated across 12 VMs (similar to container density)
+- **Resource flexibility**: Dynamic CPU/memory allocation without container limitations
 
 ### Network NAT Persistence
 - Consolidates and persists existing NAT rules

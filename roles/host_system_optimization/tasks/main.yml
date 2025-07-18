@@ -131,10 +131,10 @@
     state: present
     reload: yes
   loop:
-    - { key: "vm.swappiness", value: "5" }
+    # vm.swappiness removed - handled by focused_kvm_optimization role
     - { key: "vm.vfs_cache_pressure", value: "200" }
     - { key: "vm.min_free_kbytes", value: "131072" }
-    - { key: "vm.watermark_scale_factor", value: "200" }
+    # vm.watermark_scale_factor removed - handled by focused_kvm_optimization role
     - { key: "vm.zone_reclaim_mode", value: "0" }
     - { key: "vm.page-cluster", value: "0" }
   ignore_errors: yes  # Some parameters may not exist on all kernel versions

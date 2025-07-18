@@ -79,14 +79,8 @@
     backup: yes
   tags: [tmpfs, memory]
 
-- name: Configure swappiness for host system
-  sysctl:
-    name: vm.swappiness
-    value: "{{ host_optimization.swappiness | default(10) }}"
-    state: present
-    reload: yes
-  ignore_errors: yes  # Parameter may not exist on all kernel versions
-  tags: [swap, memory]
+# Configure swappiness - removed duplicate, handled by focused_kvm_optimization role
+# vm.swappiness moved to focused_kvm_optimization role with value "1"
 
 # GRUB configuration moved to host_performance_tuning role to avoid conflicts
 # zswap configuration is now included in the main GRUB line
