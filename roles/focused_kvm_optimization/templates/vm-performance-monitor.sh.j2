@@ -46,8 +46,16 @@ check_system_performance() {
     local cpu_count={{ ansible_processor_vcpus }}
     
     # Check if load average is high
-    if (( $(echo "$load_avg > $cpu_count" | bc -l) )); then
-        log_message "WARNING: High load average: $load_avg (CPU cores: $cpu_count)"
+    if command -v bc >/dev/null 2>&1; then
+        # bc is available - use floating point comparison
+        if (( $(echo "$load_avg > $cpu_count" | bc -l) )); then
+            log_message "WARNING: High load average: $load_avg (CPU cores: $cpu_count)"
+        fi
+    else
+        # bc not available - use awk for floating point comparison
+        if awk "BEGIN {exit !($load_avg > $cpu_count)}"; then
+            log_message "WARNING: High load average: $load_avg (CPU cores: $cpu_count)"
+        fi
     fi
     
     # Check KSM effectiveness

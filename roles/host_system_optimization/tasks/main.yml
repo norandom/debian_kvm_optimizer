@@ -26,6 +26,7 @@
       - cpufrequtils
       - ncdu
       - tree
+      - bc
     state: present
   tags: [packages]
 

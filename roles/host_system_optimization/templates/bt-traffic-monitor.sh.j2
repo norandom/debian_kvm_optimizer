@@ -103,8 +103,16 @@ check_system_load() {
     echo "[$TIMESTAMP] System Load: 1min=$LOAD_1MIN, 5min=$LOAD_5MIN, 15min=$LOAD_15MIN" >> $LOG_FILE
     
     # Alert on high load (> CPU count)
-    if (( $(echo "$LOAD_1MIN > {{ host_specs.cpu_threads }}" | bc -l) )); then
-        echo "[$TIMESTAMP] WARNING: High 1-minute load: $LOAD_1MIN" >> $LOG_FILE
+    if command -v bc >/dev/null 2>&1; then
+        # bc is available - use floating point comparison
+        if (( $(echo "$LOAD_1MIN > {{ host_specs.cpu_threads }}" | bc -l) )); then
+            echo "[$TIMESTAMP] WARNING: High 1-minute load: $LOAD_1MIN" >> $LOG_FILE
+        fi
+    else
+        # bc not available - use awk for floating point comparison
+        if awk "BEGIN {exit !($LOAD_1MIN > {{ host_specs.cpu_threads }})}"; then
+            echo "[$TIMESTAMP] WARNING: High 1-minute load: $LOAD_1MIN" >> $LOG_FILE
+        fi
     fi
 }
 

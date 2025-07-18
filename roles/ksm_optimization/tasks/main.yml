@@ -4,6 +4,7 @@
     name:
       - ksmtuned
       - util-linux
+      - bc
     state: present
   tags: [ksm, packages]
 

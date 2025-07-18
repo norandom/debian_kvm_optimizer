@@ -9,11 +9,11 @@ TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
 # Function to log KSM metrics
 log_ksm_metrics() {
-    local pages_shared=$(cat /sys/kernel/mm/ksm/pages_shared)
-    local pages_sharing=$(cat /sys/kernel/mm/ksm/pages_sharing)
-    local pages_unshared=$(cat /sys/kernel/mm/ksm/pages_unshared)
-    local pages_volatile=$(cat /sys/kernel/mm/ksm/pages_volatile)
-    local full_scans=$(cat /sys/kernel/mm/ksm/full_scans)
+    local pages_shared=$(cat /sys/kernel/mm/ksm/pages_shared 2>/dev/null || echo 0)
+    local pages_sharing=$(cat /sys/kernel/mm/ksm/pages_sharing 2>/dev/null || echo 0)
+    local pages_unshared=$(cat /sys/kernel/mm/ksm/pages_unshared 2>/dev/null || echo 0)
+    local pages_volatile=$(cat /sys/kernel/mm/ksm/pages_volatile 2>/dev/null || echo 0)
+    local full_scans=$(cat /sys/kernel/mm/ksm/full_scans 2>/dev/null || echo 0)
     
     # Calculate sharing ratio
     local total_pages=$((pages_shared + pages_sharing + pages_unshared + pages_volatile))
@@ -36,10 +36,10 @@ log_ksm_metrics() {
 
 # Function to check KSM health
 check_ksm_health() {
-    local ksm_run=$(cat /sys/kernel/mm/ksm/run)
+    local ksm_run=$(cat /sys/kernel/mm/ksm/run 2>/dev/null || echo 0)
     
     if [ "$ksm_run" != "1" ]; then
-        echo "[$TIMESTAMP] ERROR: KSM is not running" >> $LOG_FILE
+        echo "[$TIMESTAMP] ERROR: KSM is not running (status: $ksm_run)" >> $LOG_FILE
         # Attempt to restart
         /usr/local/bin/ksm-optimization.sh start
         echo "[$TIMESTAMP] Attempted to restart KSM" >> $LOG_FILE
@@ -49,8 +49,19 @@ check_ksm_health() {
 # Function to optimize KSM parameters based on current state
 auto_optimize() {
     local mem_usage=$(free | awk 'NR==2{printf "%.0f", $3*100/$2}')
-    local pages_scanned=$(cat /sys/kernel/mm/ksm/pages_scanned || echo 0)
-    local pages_shared=$(cat /sys/kernel/mm/ksm/pages_shared)
+    
+    # Handle missing pages_scanned file gracefully (not available in all kernel versions)
+    local pages_scanned=0
+    if [ -f /sys/kernel/mm/ksm/pages_scanned ]; then
+        pages_scanned=$(cat /sys/kernel/mm/ksm/pages_scanned 2>/dev/null || echo 0)
+    else
+        # Fallback: estimate based on full_scans and pages_to_scan
+        local full_scans=$(cat /sys/kernel/mm/ksm/full_scans 2>/dev/null || echo 0)
+        local pages_to_scan=$(cat /sys/kernel/mm/ksm/pages_to_scan 2>/dev/null || echo 1000)
+        pages_scanned=$((full_scans * pages_to_scan))
+    fi
+    
+    local pages_shared=$(cat /sys/kernel/mm/ksm/pages_shared 2>/dev/null || echo 0)
     
     # Calculate scan efficiency
     local scan_efficiency=0
@@ -58,7 +69,7 @@ auto_optimize() {
         scan_efficiency=$((pages_shared * 100 / pages_scanned))
     fi
     
-    echo "[$TIMESTAMP] Auto-optimize: mem=${mem_usage}%, efficiency=${scan_efficiency}%" >> $LOG_FILE
+    echo "[$TIMESTAMP] Auto-optimize: mem=${mem_usage}%, efficiency=${scan_efficiency}% (scanned=${pages_scanned})" >> $LOG_FILE
     
     # Trigger optimization if needed
     if [ $mem_usage -gt $MEMORY_USAGE_THRESHOLD ] || [ $scan_efficiency -lt $SCAN_EFFICIENCY_THRESHOLD ]; then

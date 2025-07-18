@@ -40,14 +40,21 @@ apply_ksm_settings() {
 # Function to get KSM statistics
 get_ksm_stats() {
     echo "=== KSM Statistics ==="
-    echo "Status: $(cat /sys/kernel/mm/ksm/run)"
-    echo "Pages shared: $(cat /sys/kernel/mm/ksm/pages_shared)"
-    echo "Pages sharing: $(cat /sys/kernel/mm/ksm/pages_sharing)"
-    echo "Pages unshared: $(cat /sys/kernel/mm/ksm/pages_unshared)"
-    echo "Pages volatile: $(cat /sys/kernel/mm/ksm/pages_volatile)"
-    echo "Full scans: $(cat /sys/kernel/mm/ksm/full_scans)"
-    echo "Stable node chains: $(cat /sys/kernel/mm/ksm/stable_node_chains)"
-    echo "Stable node dups: $(cat /sys/kernel/mm/ksm/stable_node_dups)"
+    echo "Status: $(cat /sys/kernel/mm/ksm/run 2>/dev/null || echo 'N/A')"
+    echo "Pages shared: $(cat /sys/kernel/mm/ksm/pages_shared 2>/dev/null || echo 'N/A')"
+    echo "Pages sharing: $(cat /sys/kernel/mm/ksm/pages_sharing 2>/dev/null || echo 'N/A')"
+    echo "Pages unshared: $(cat /sys/kernel/mm/ksm/pages_unshared 2>/dev/null || echo 'N/A')"
+    echo "Pages volatile: $(cat /sys/kernel/mm/ksm/pages_volatile 2>/dev/null || echo 'N/A')"
+    echo "Full scans: $(cat /sys/kernel/mm/ksm/full_scans 2>/dev/null || echo 'N/A')"
+    echo "Stable node chains: $(cat /sys/kernel/mm/ksm/stable_node_chains 2>/dev/null || echo 'N/A')"
+    echo "Stable node dups: $(cat /sys/kernel/mm/ksm/stable_node_dups 2>/dev/null || echo 'N/A')"
+    
+    # Show pages_scanned if available
+    if [ -f /sys/kernel/mm/ksm/pages_scanned ]; then
+        echo "Pages scanned: $(cat /sys/kernel/mm/ksm/pages_scanned 2>/dev/null || echo 'N/A')"
+    else
+        echo "Pages scanned: Not available (kernel version does not support this metric)"
+    fi
 }
 
 # Function to optimize KSM based on system load
@@ -57,21 +64,43 @@ optimize_ksm() {
     
     log_message "Memory usage: ${mem_usage}%, Load average: ${load_avg}"
     
-    if (( $(echo "$mem_usage > 85" | bc -l) )); then
-        # High memory usage - be more aggressive
-        echo 5 > /sys/kernel/mm/ksm/sleep_millisecs
-        echo 30000 > /sys/kernel/mm/ksm/pages_to_scan
-        log_message "High memory usage detected - increasing KSM aggressiveness"
-    elif (( $(echo "$mem_usage < 60" | bc -l) )); then
-        # Low memory usage - be more conservative
-        echo 20 > /sys/kernel/mm/ksm/sleep_millisecs
-        echo 10000 > /sys/kernel/mm/ksm/pages_to_scan
-        log_message "Low memory usage detected - reducing KSM aggressiveness"
+    # Use integer comparison as fallback if bc is not available
+    if command -v bc >/dev/null 2>&1; then
+        # bc is available - use floating point comparison
+        if (( $(echo "$mem_usage > 85" | bc -l) )); then
+            # High memory usage - be more aggressive
+            echo 5 > /sys/kernel/mm/ksm/sleep_millisecs
+            echo 30000 > /sys/kernel/mm/ksm/pages_to_scan
+            log_message "High memory usage detected - increasing KSM aggressiveness"
+        elif (( $(echo "$mem_usage < 60" | bc -l) )); then
+            # Low memory usage - be more conservative
+            echo 20 > /sys/kernel/mm/ksm/sleep_millisecs
+            echo 10000 > /sys/kernel/mm/ksm/pages_to_scan
+            log_message "Low memory usage detected - reducing KSM aggressiveness"
+        else
+            # Normal settings
+            echo $KSM_SLEEP_MILLISECS > /sys/kernel/mm/ksm/sleep_millisecs
+            echo $KSM_PAGES_TO_SCAN > /sys/kernel/mm/ksm/pages_to_scan
+            log_message "Normal memory usage - using default KSM settings"
+        fi
     else
-        # Normal settings
-        echo $KSM_SLEEP_MILLISECS > /sys/kernel/mm/ksm/sleep_millisecs
-        echo $KSM_PAGES_TO_SCAN > /sys/kernel/mm/ksm/pages_to_scan
-        log_message "Normal memory usage - using default KSM settings"
+        # bc not available - use integer comparison
+        if [ "$mem_usage" -gt 85 ]; then
+            # High memory usage - be more aggressive
+            echo 5 > /sys/kernel/mm/ksm/sleep_millisecs
+            echo 30000 > /sys/kernel/mm/ksm/pages_to_scan
+            log_message "High memory usage detected - increasing KSM aggressiveness (using integer comparison)"
+        elif [ "$mem_usage" -lt 60 ]; then
+            # Low memory usage - be more conservative
+            echo 20 > /sys/kernel/mm/ksm/sleep_millisecs
+            echo 10000 > /sys/kernel/mm/ksm/pages_to_scan
+            log_message "Low memory usage detected - reducing KSM aggressiveness (using integer comparison)"
+        else
+            # Normal settings
+            echo $KSM_SLEEP_MILLISECS > /sys/kernel/mm/ksm/sleep_millisecs
+            echo $KSM_PAGES_TO_SCAN > /sys/kernel/mm/ksm/pages_to_scan
+            log_message "Normal memory usage - using default KSM settings (using integer comparison)"
+        fi
     fi
 }
 
