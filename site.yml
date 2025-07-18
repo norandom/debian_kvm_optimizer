@@ -66,7 +66,7 @@
           {{ project_name | title }} Summary:
           - Optimization Level: {{ optimization_level }}
           - VMs Currently Running: {{ ansible_libvirt_vms | default([]) | length }}
-          - System Load: {{ ansible_loadavg['1min'] }}
+          - System Load: {{ ansible_loadavg.get('1min', 'Unknown') if ansible_loadavg is defined else 'Unknown' }}
           - Available Memory: {{ ansible_memfree_mb }}MB
           - Storage Usage: {{ ansible_mounts | selectattr('mount', 'equalto', '/') | map(attribute='size_total') | first | filesizeformat }}
           - KSM Status: {{ ansible_ksm_status | default('Unknown') }}
