@@ -47,6 +47,13 @@
   notify: update grub
   tags: [cpu, isolation]
 
+- name: Create host CPU affinity script
+  template:
+    src: set-host-cpu-affinity.sh.j2
+    dest: /usr/local/bin/set-host-cpu-affinity.sh
+    mode: '0755'
+  tags: [cpu, affinity]
+
 - name: Set CPU affinity for host processes
   template:
     src: host-cpu-affinity.service.j2
