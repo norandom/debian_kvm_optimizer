@@ -28,9 +28,7 @@ find /var/tmp -type f -atime +7 -delete >> $LOG_FILE 2>&1
 echo "Cleaning systemd journal..." >> $LOG_FILE
 journalctl --vacuum-time=7d >> $LOG_FILE 2>&1
 
-# Clean thumbnail cache
-echo "Cleaning thumbnail cache..." >> $LOG_FILE
-find /home -name ".cache" -type d -exec rm -rf {}/thumbnails \; >> $LOG_FILE 2>&1
+# Thumbnail cache cleanup removed - not needed for server environment
 
 # Run fstrim on all mounted filesystems
 echo "Running fstrim..." >> $LOG_FILE
