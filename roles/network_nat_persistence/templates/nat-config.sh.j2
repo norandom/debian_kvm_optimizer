@@ -10,34 +10,56 @@ echo "[$TIMESTAMP] Applying NAT configuration" >> $LOG_FILE
 # Enable IP forwarding
 echo 1 > /proc/sys/net/ipv4/ip_forward
 
-# Clear existing NAT rules (except libvirt)
-iptables -t nat -F PREROUTING || true
-iptables -t nat -F POSTROUTING || true
+# DO NOT clear all NAT rules - it breaks network connectivity!
+# Only add our specific rules if they don't exist
 
-# Add MASQUERADE rule for outbound traffic
-iptables -t nat -A POSTROUTING -o {{ network_interfaces.primary }} -j MASQUERADE
+# Check and add MASQUERADE rule for outbound traffic if not exists
+if ! iptables -t nat -C POSTROUTING -o {{ network_interfaces.primary }} -j MASQUERADE 2>/dev/null; then
+    iptables -t nat -A POSTROUTING -o {{ network_interfaces.primary }} -j MASQUERADE
+    echo "[$TIMESTAMP] Added MASQUERADE rule for {{ network_interfaces.primary }}" >> $LOG_FILE
+fi
 
-# Configure port forwarding rules
+# Ensure libvirt NAT rules for VM connectivity
+if ! iptables -t nat -C POSTROUTING -s 192.168.122.0/24 -j MASQUERADE 2>/dev/null; then
+    iptables -t nat -A POSTROUTING -s 192.168.122.0/24 -j MASQUERADE
+    echo "[$TIMESTAMP] Added libvirt MASQUERADE rule" >> $LOG_FILE
+fi
+
+# Configure port forwarding rules - check before adding to avoid duplicates
 {% for forward in port_forwards %}
 {% if forward.host_port_range is defined %}
 # Port range forwarding: {{ forward.name }}
 for PORT in {{ forward.host_port_range.split(':')[0] }}..{{ forward.host_port_range.split(':')[1] }}; do
-    iptables -I FORWARD -o {{ network_interfaces.bridge }} -p {{ forward.protocol }} -d {{ forward.guest_ip }} --dport {{ forward.guest_port }} -j ACCEPT
-    iptables -t nat -I PREROUTING -p {{ forward.protocol }} --dport $PORT -j DNAT --to {{ forward.guest_ip }}:{{ forward.guest_port }}
+    # Check and add FORWARD rule
+    if ! iptables -C FORWARD -o {{ network_interfaces.bridge }} -p {{ forward.protocol }} -d {{ forward.guest_ip }} --dport {{ forward.guest_port }} -j ACCEPT 2>/dev/null; then
+        iptables -I FORWARD -o {{ network_interfaces.bridge }} -p {{ forward.protocol }} -d {{ forward.guest_ip }} --dport {{ forward.guest_port }} -j ACCEPT
+    fi
+    # Check and add PREROUTING rule
+    if ! iptables -t nat -C PREROUTING -p {{ forward.protocol }} --dport $PORT -j DNAT --to {{ forward.guest_ip }}:{{ forward.guest_port }} 2>/dev/null; then
+        iptables -t nat -I PREROUTING -p {{ forward.protocol }} --dport $PORT -j DNAT --to {{ forward.guest_ip }}:{{ forward.guest_port }}
+    fi
 done
 {% else %}
 # Single port forwarding: {{ forward.name }}
 {% if forward.interface != "*" %}
-iptables -t nat -I PREROUTING -i {{ forward.interface }} -p {{ forward.protocol }} --dport {{ forward.host_port }} -j DNAT --to {{ forward.guest_ip }}:{{ forward.guest_port }}
+if ! iptables -t nat -C PREROUTING -i {{ forward.interface }} -p {{ forward.protocol }} --dport {{ forward.host_port }} -j DNAT --to {{ forward.guest_ip }}:{{ forward.guest_port }} 2>/dev/null; then
+    iptables -t nat -I PREROUTING -i {{ forward.interface }} -p {{ forward.protocol }} --dport {{ forward.host_port }} -j DNAT --to {{ forward.guest_ip }}:{{ forward.guest_port }}
+fi
 {% else %}
-iptables -t nat -I PREROUTING -p {{ forward.protocol }} --dport {{ forward.host_port }} -j DNAT --to {{ forward.guest_ip }}:{{ forward.guest_port }}
+if ! iptables -t nat -C PREROUTING -p {{ forward.protocol }} --dport {{ forward.host_port }} -j DNAT --to {{ forward.guest_ip }}:{{ forward.guest_port }} 2>/dev/null; then
+    iptables -t nat -I PREROUTING -p {{ forward.protocol }} --dport {{ forward.host_port }} -j DNAT --to {{ forward.guest_ip }}:{{ forward.guest_port }}
+fi
 {% endif %}
-iptables -I FORWARD -o {{ network_interfaces.bridge }} -p {{ forward.protocol }} -d {{ forward.guest_ip }} --dport {{ forward.guest_port }} -j ACCEPT
+if ! iptables -C FORWARD -o {{ network_interfaces.bridge }} -p {{ forward.protocol }} -d {{ forward.guest_ip }} --dport {{ forward.guest_port }} -j ACCEPT 2>/dev/null; then
+    iptables -I FORWARD -o {{ network_interfaces.bridge }} -p {{ forward.protocol }} -d {{ forward.guest_ip }} --dport {{ forward.guest_port }} -j ACCEPT
+fi
 {% endif %}
 {% endfor %}
 
 # Allow general traffic to the guest IP (for existing connections)
-iptables -I FORWARD -d {{ port_forwards[0].guest_ip }} -j ACCEPT
+if ! iptables -C FORWARD -d {{ port_forwards[0].guest_ip }} -j ACCEPT 2>/dev/null; then
+    iptables -I FORWARD -d {{ port_forwards[0].guest_ip }} -j ACCEPT
+fi
 
 # Log applied configuration
 echo "[$TIMESTAMP] NAT configuration applied successfully" >> $LOG_FILE

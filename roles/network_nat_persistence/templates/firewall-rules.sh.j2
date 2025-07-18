@@ -28,5 +28,10 @@ iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 # Allow loopback traffic
 iptables -A INPUT -i lo -j ACCEPT
 
+# Allow libvirt/VM traffic on virbr0 bridge
+iptables -A INPUT -i virbr0 -j ACCEPT
+iptables -A FORWARD -i virbr0 -j ACCEPT
+iptables -A FORWARD -o virbr0 -j ACCEPT
+
 # Log applied rules
 echo "[$TIMESTAMP] Firewall rules applied successfully" >> $LOG_FILE
