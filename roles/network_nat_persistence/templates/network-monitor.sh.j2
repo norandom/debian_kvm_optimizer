@@ -32,6 +32,7 @@ bridge_status() {
 
 # Check port forwarding effectiveness
 port_forward_check() {
+{% if port_forwards | length > 0 %}
     local guest_ip="{{ port_forwards[0].guest_ip }}"
     local guest_port="{{ port_forwards[0].guest_port }}"
     
@@ -41,6 +42,10 @@ port_forward_check() {
     else
         echo "[$TIMESTAMP] WARNING: Guest $guest_ip is NOT reachable" >> $LOG_FILE
     fi
+{% else %}
+    # No port forwards configured - skip check
+    echo "[$TIMESTAMP] No port forwards configured, skipping port forward check" >> $LOG_FILE
+{% endif %}
 }
 
 # Check network performance
