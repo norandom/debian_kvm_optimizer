@@ -57,9 +57,11 @@ fi
 {% endfor %}
 
 # Allow general traffic to the guest IP (for existing connections)
+{% if port_forwards | length > 0 %}
 if ! iptables -C FORWARD -d {{ port_forwards[0].guest_ip }} -j ACCEPT 2>/dev/null; then
     iptables -I FORWARD -d {{ port_forwards[0].guest_ip }} -j ACCEPT
 fi
+{% endif %}
 
 # Log applied configuration
 echo "[$TIMESTAMP] NAT configuration applied successfully" >> $LOG_FILE
