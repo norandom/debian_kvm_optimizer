@@ -12,27 +12,27 @@ vm_network:
 # Port forwarding configuration (based on current setup)
 # IMPORTANT: These are examples only. Configure specific port forwards for your VMs
 # by updating the guest_ip to match your actual VM IPs
-port_forwards: []
-#  - name: "SSH to VM"
-#    host_port: 2223
-#    guest_ip: "192.168.122.XX"  # Replace XX with actual VM IP
-#    guest_port: 22
-#    protocol: tcp
-#    interface: "eno1"
-#    
-#  - name: "BitTorrent client"
-#    host_port: 51413
-#    guest_ip: "192.168.122.XX"  # Replace XX with actual VM IP
-#    guest_port: 51413
-#    protocol: tcp
-#    interface: "*"
-#    
-#  - name: "BitTorrent range"
-#    host_port_range: "6881:6889"
-#    guest_ip: "192.168.122.XX"  # Replace XX with actual VM IP
-#    guest_port: 51413
-#    protocol: tcp
-#    interface: "*"
+port_forwards:
+  - name: "SSH to VM"
+    host_port: 2223
+    guest_ip: "192.168.122.147"
+    guest_port: 22
+    protocol: tcp
+    interface: "eno1"
+    
+  - name: "BitTorrent client"
+    host_port: 51413
+    guest_ip: "192.168.122.147"
+    guest_port: 51413
+    protocol: tcp
+    interface: "*"
+    
+  - name: "BitTorrent range"
+    host_port_range: "6881:6889"
+    guest_ip: "192.168.122.147"
+    guest_port: 51413
+    protocol: tcp
+    interface: "*"
 
 # Firewall configuration
 firewall_rules:
