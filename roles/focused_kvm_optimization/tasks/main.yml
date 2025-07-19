@@ -47,6 +47,13 @@
   notify: update grub
   tags: [cpu, isolation]
 
+- name: Blacklist i801 SMBus module to prevent IRQ storms
+  template:
+    src: i801-blacklist.conf.j2
+    dest: /etc/modprobe.d/i801-blacklist.conf
+    mode: '0644'
+  tags: [kernel, irq-fix]
+
 - name: Create host CPU affinity script
   template:
     src: set-host-cpu-affinity.sh.j2
