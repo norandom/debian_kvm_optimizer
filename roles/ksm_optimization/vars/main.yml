@@ -13,9 +13,9 @@ ksm_config:
   # Maximum page sharing (increased for high VM density)
   max_page_sharing: 1000
   
-  # Scanning parameters (balanced for CPU usage)
-  sleep_millisecs: 100
-  pages_to_scan: 5000
+  # Scanning parameters (optimized for low CPU usage)
+  sleep_millisecs: 500
+  pages_to_scan: 1000
   
   # Stable node chain pruning
   stable_node_chains_prune_millisecs: 5
