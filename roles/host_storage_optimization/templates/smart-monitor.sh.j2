@@ -12,19 +12,19 @@ check_smart_health() {
     local disk_type=$2
     
     # Check if smartctl is available
-    if ! command -v smartctl &> /dev/null; then
+    if ! command -v /usr/sbin/smartctl &> /dev/null; then
         echo "[$TIMESTAMP] WARNING: smartctl not available, skipping SMART monitoring" >> $ALERT_FILE
         return
     fi
     
     # Check if device supports SMART
-    if ! smartctl -i $disk &>/dev/null; then
+    if ! /usr/sbin/smartctl -i $disk &>/dev/null; then
         echo "[$TIMESTAMP] INFO: SMART not supported or device not accessible for $disk" >> $LOG_FILE
         return
     fi
     
     # Get SMART health status
-    HEALTH_STATUS=$(smartctl -H $disk 2>/dev/null | grep -E "PASSED|FAILED|OK" | awk '{print $NF}')
+    HEALTH_STATUS=$(/usr/sbin/smartctl -H $disk 2>/dev/null | grep -E "PASSED|FAILED|OK" | awk '{print $NF}')
     
     if [[ -z "$HEALTH_STATUS" ]]; then
         echo "[$TIMESTAMP] INFO: Unable to get SMART health status for $disk (may not support SMART)" >> $LOG_FILE
@@ -43,10 +43,10 @@ check_smart_health() {
     # Get detailed attributes based on disk type
     if [[ "$disk_type" == "sata" ]]; then
         # Check critical SATA/SAS attributes
-        REALLOCATED=$(smartctl -A $disk 2>/dev/null | grep "Reallocated_Sector_Ct" | awk '{print $10}')
-        PENDING=$(smartctl -A $disk 2>/dev/null | grep "Current_Pending_Sector" | awk '{print $10}')
-        UNCORRECTABLE=$(smartctl -A $disk 2>/dev/null | grep "Offline_Uncorrectable" | awk '{print $10}')
-        TEMPERATURE=$(smartctl -A $disk 2>/dev/null | grep "Temperature_Celsius" | awk '{print $10}')
+        REALLOCATED=$(/usr/sbin/smartctl -A $disk 2>/dev/null | grep "Reallocated_Sector_Ct" | awk '{print $10}')
+        PENDING=$(/usr/sbin/smartctl -A $disk 2>/dev/null | grep "Current_Pending_Sector" | awk '{print $10}')
+        UNCORRECTABLE=$(/usr/sbin/smartctl -A $disk 2>/dev/null | grep "Offline_Uncorrectable" | awk '{print $10}')
+        TEMPERATURE=$(/usr/sbin/smartctl -A $disk 2>/dev/null | grep "Temperature_Celsius" | awk '{print $10}')
         
         # Alert on critical values
         if [[ -n "$REALLOCATED" && "$REALLOCATED" -gt 0 ]]; then
@@ -106,7 +106,7 @@ check_smart_health() {
 echo "[$TIMESTAMP] Starting SMART disk monitoring" >> $LOG_FILE
 
 # Check if smartctl is available
-if ! command -v smartctl &> /dev/null; then
+if ! command -v /usr/sbin/smartctl &> /dev/null; then
     echo "[$TIMESTAMP] WARNING: smartctl not installed. Install with: apt install smartmontools" >> $ALERT_FILE
     echo "[$TIMESTAMP] SMART monitoring skipped - smartctl not available" >> $LOG_FILE
 else

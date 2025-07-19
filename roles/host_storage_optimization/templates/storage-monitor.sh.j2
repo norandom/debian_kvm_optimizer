@@ -33,12 +33,12 @@ for disk in /dev/sd* /dev/nvme*; do
     if [[ -e $disk ]] && [[ $disk != *[0-9] ]] && [[ $disk != *p[0-9] ]]; then
         echo "Device: $disk" >> $LOG_FILE
         # Basic health check
-        smartctl -H $disk >> $LOG_FILE 2>&1
+        /usr/sbin/smartctl -H $disk >> $LOG_FILE 2>&1
         
         # Get detailed attributes for SATA/SAS drives
         if [[ $disk == /dev/sd* ]]; then
             echo "-- Critical Attributes for $disk --" >> $LOG_FILE
-            smartctl -A $disk | grep -E "Reallocated_Sector_Ct|Current_Pending_Sector|Offline_Uncorrectable|Temperature_Celsius|Wear_Leveling_Count|Media_Wearout_Indicator" >> $LOG_FILE 2>&1
+            /usr/sbin/smartctl -A $disk | grep -E "Reallocated_Sector_Ct|Current_Pending_Sector|Offline_Uncorrectable|Temperature_Celsius|Wear_Leveling_Count|Media_Wearout_Indicator" >> $LOG_FILE 2>&1
         fi
         
         # Get NVMe specific info
@@ -48,7 +48,7 @@ for disk in /dev/sd* /dev/nvme*; do
         fi
         
         # Check for critical warnings
-        SMART_HEALTH=$(smartctl -H $disk 2>/dev/null | grep -E "PASSED|FAILED|OK")
+        SMART_HEALTH=$(/usr/sbin/smartctl -H $disk 2>/dev/null | grep -E "PASSED|FAILED|OK")
         if [[ $SMART_HEALTH == *"FAILED"* ]]; then
             echo "[$TIMESTAMP] CRITICAL: SMART health check FAILED for $disk!" >> $LOG_FILE
         fi
