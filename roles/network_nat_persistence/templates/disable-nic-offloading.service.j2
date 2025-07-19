@@ -1,0 +1,11 @@
+[Unit]
+Description=Disable NIC offloading to fix Intel I219-LM Hardware Unit Hangs
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/ethtool -K {{ network_interfaces.primary }} gso off gro off tso off tx off rx off rxvlan off txvlan off sg off
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target
