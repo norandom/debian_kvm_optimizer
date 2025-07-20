@@ -27,9 +27,6 @@
         mode: '0644'
 
   roles:
-    - role: kernel_params
-      tags: [kernel, sysctl]
-      
     - role: host_system_optimization
       tags: [system, core]
       
