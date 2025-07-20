@@ -113,8 +113,40 @@ check_swap_pressure() {
     fi
 }
 
+# Function to check system load
+check_system_load() {
+    local cpu_count=$(nproc)
+    local load_avg=$(uptime | awk -F'load average:' '{print $2}' | awk '{gsub(/^[ \t]+/, "", $1); print $1}' | tr -d ',')
+    
+    # Use bc for floating point comparison if available, otherwise use integer approximation
+    if command -v bc >/dev/null 2>&1; then
+        local load_threshold=$(echo "$cpu_count * 0.8" | bc)
+        if (( $(echo "$load_avg > $load_threshold" | bc -l) )); then
+            log_message "High system load detected: $load_avg (threshold: $load_threshold for $cpu_count CPUs) - skipping memory ballooning"
+            return 1
+        fi
+    else
+        # Fallback: convert to integer (load * 100) for comparison
+        local load_int=$(echo "$load_avg * 100" | cut -d. -f1 2>/dev/null || echo "${load_avg//./}")
+        local threshold_int=$((cpu_count * 80))  # 80% of CPU count * 100
+        if [[ $load_int -gt $threshold_int ]]; then
+            log_message "High system load detected: $load_avg (threshold: 0.8 per CPU for $cpu_count CPUs) - skipping memory ballooning"
+            return 1
+        fi
+    fi
+    
+    log_message "System load acceptable: $load_avg (CPUs: $cpu_count) - proceeding with memory ballooning"
+    return 0
+}
+
 # Main execution
 log_message "Starting VM memory ballooning optimization"
+
+# Check system load before proceeding
+if ! check_system_load; then
+    log_message "Aborting memory ballooning due to high system load"
+    exit 0
+fi
 
 # Get host memory stats
 memory_stats=$(get_host_memory_stats)

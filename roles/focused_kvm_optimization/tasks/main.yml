@@ -135,7 +135,7 @@
 - name: Schedule VM memory ballooning
   cron:
     name: "VM memory ballooning optimization"
-    minute: "*/3"
+    minute: "*/10"
     job: "/usr/local/bin/vm-memory-ballooning.sh"
     user: root
   tags: [memory, ballooning, cron]

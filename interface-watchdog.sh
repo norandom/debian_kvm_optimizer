@@ -34,23 +34,15 @@ perform_interface_reset() {
     fi
     
     # Step 2: Bring interface down
-    log_message "$(date): Step 1/5 - Bringing interface down"
+    log_message "$(date): Step 1/3 - Bringing interface down"
     ip link set "$INTERFACE" down
     
-    # Step 3: Reset e1000e module (for tx queue lockups)
-    log_message "$(date): Step 2/5 - Resetting e1000e driver"
-    modprobe -r e1000e 2>/dev/null && sleep 2 && modprobe e1000e || log_message "$(date): Module reset failed"
-    
-    # Step 4: Reset ethtool settings
-    log_message "$(date): Step 3/5 - Resetting ethtool settings"
-    ethtool -r "$INTERFACE" 2>/dev/null || log_message "$(date): ethtool reset not supported"
-    
-    # Step 5: Disable hardware offloading (critical for I219-LM)
-    log_message "$(date): Step 4/5 - Disabling hardware offloading"
+    # Step 3: Disable hardware offloading (critical for I219-LM)
+    log_message "$(date): Step 2/3 - Disabling hardware offloading"
     ethtool -K "$INTERFACE" tx off rx off tso off gso off gro off lro off ufo off txvlan off rxvlan off ntuple off 2>/dev/null || true
     
-    # Step 6: Bring interface back up
-    log_message "$(date): Step 5/5 - Bringing interface up"
+    # Step 4: Bring interface back up
+    log_message "$(date): Step 3/3 - Bringing interface up"
     ip link set "$INTERFACE" up
     
     # Wait for link to establish
