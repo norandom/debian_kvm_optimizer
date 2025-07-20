@@ -61,8 +61,15 @@
     state: started
   tags: [tuned]
 
+- name: Check current tuned profile
+  command: tuned-adm active
+  register: tuned_current_profile
+  changed_when: false
+  tags: [tuned]
+
 - name: Set tuned profile for virtualization host
   command: tuned-adm profile virtual-host
+  when: "'Current active profile: virtual-host' not in tuned_current_profile.stdout"
   tags: [tuned]
 
 - name: Disable unnecessary services for host optimization
@@ -124,21 +131,6 @@
     user: root
   tags: [monitoring]
 
-- name: Optimize memory pressure for high-density VMs
-  sysctl:
-    name: "{{ item.key }}"
-    value: "{{ item.value }}"
-    state: present
-    reload: yes
-  loop:
-    # vm.swappiness removed - handled by focused_kvm_optimization role
-    - { key: "vm.vfs_cache_pressure", value: "200" }
-    - { key: "vm.min_free_kbytes", value: "131072" }
-    # vm.watermark_scale_factor removed - handled by focused_kvm_optimization role
-    - { key: "vm.zone_reclaim_mode", value: "0" }
-    - { key: "vm.page-cluster", value: "0" }
-  ignore_errors: yes  # Some parameters may not exist on all kernel versions
-  tags: [memory, performance, swap]
 
 - name: Create BitTorrent traffic monitoring script
   template:

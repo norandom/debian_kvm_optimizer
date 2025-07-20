@@ -21,8 +21,6 @@
     - { key: "net.ipv4.tcp_rmem", value: "4096 87380 16777216" }
     - { key: "net.ipv4.tcp_wmem", value: "4096 65536 16777216" }
     - { key: "net.core.netdev_max_backlog", value: "5000" }
-    - { key: "vm.min_free_kbytes", value: "65536" }
-    - { key: "vm.zone_reclaim_mode", value: "0" }
   ignore_errors: yes  # Some parameters may not exist on all kernel versions
   tags: [kernel, network, memory]
 
