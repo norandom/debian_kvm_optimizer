@@ -5,9 +5,23 @@
 LOG_FILE="/var/log/vm-memory-ballooning.log"
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
+# VMs to exclude from memory ballooning (space-separated list)
+EXCLUDED_VMS="{{ vm_ballooning_exclusions | default('') }}"
+
 # Function to log messages
 log_message() {
     echo "[$TIMESTAMP] $1" >> $LOG_FILE
+}
+
+# Function to check if VM should be excluded
+is_vm_excluded() {
+    local vm_name="$1"
+    for excluded in $EXCLUDED_VMS; do
+        if [[ "$vm_name" == "$excluded" ]]; then
+            return 0  # VM is excluded
+        fi
+    done
+    return 1  # VM is not excluded
 }
 
 # Function to get host memory stats
@@ -25,6 +39,13 @@ get_host_memory_stats() {
 # Function to optimize VM memory allocation
 optimize_vm_memory() {
     local vm_name=$1
+    
+    # Skip excluded VMs
+    if is_vm_excluded "$vm_name"; then
+        log_message "Skipping excluded VM: $vm_name"
+        return 0
+    fi
+    
     local vm_state=$(virsh domstate "$vm_name" 2>/dev/null)
     
     if [[ "$vm_state" == "running" ]]; then
@@ -73,14 +94,18 @@ check_swap_pressure() {
         if [[ $swap_percent -gt 50 ]]; then
             log_message "HIGH SWAP PRESSURE: ${swap_used}MB/${swap_total}MB (${swap_percent}%) - triggering emergency ballooning"
             
-            # Emergency ballooning - reduce all VMs by 15%
+            # Emergency ballooning - reduce all VMs by 15% (except excluded ones)
             virsh list --name | while read vm; do
                 if [[ -n "$vm" ]]; then
-                    local current_mem=$(virsh dommemstat "$vm" 2>/dev/null | grep "actual" | awk '{print $2}')
-                    if [[ -n "$current_mem" ]]; then
-                        local target_mem=$((current_mem * 85 / 100))  # Reduce by 15%
-                        virsh setmem "$vm" "${target_mem}k" 2>/dev/null
-                        log_message "EMERGENCY: Ballooned down VM $vm: ${current_mem}k -> ${target_mem}k"
+                    if is_vm_excluded "$vm"; then
+                        log_message "EMERGENCY: Skipping excluded VM $vm during emergency ballooning"
+                    else
+                        local current_mem=$(virsh dommemstat "$vm" 2>/dev/null | grep "actual" | awk '{print $2}')
+                        if [[ -n "$current_mem" ]]; then
+                            local target_mem=$((current_mem * 85 / 100))  # Reduce by 15%
+                            virsh setmem "$vm" "${target_mem}k" 2>/dev/null
+                            log_message "EMERGENCY: Ballooned down VM $vm: ${current_mem}k -> ${target_mem}k"
+                        fi
                     fi
                 fi
             done
