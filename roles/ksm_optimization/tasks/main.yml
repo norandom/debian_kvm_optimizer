@@ -74,19 +74,19 @@
   notify: reload systemd
   tags: [ksm, systemd]
 
-- name: Enable and start KSM optimization service
+- name: Disable KSM optimization service
   systemd:
     name: ksm-optimization
-    enabled: yes
-    state: started
+    enabled: no
+    state: stopped
     daemon_reload: yes
   tags: [ksm, services]
 
-- name: Enable and start KSM monitoring timer
+- name: Disable KSM monitoring timer
   systemd:
     name: ksm-monitor.timer
-    enabled: yes
-    state: started
+    enabled: no
+    state: stopped
     daemon_reload: yes
   tags: [ksm, services]
 
