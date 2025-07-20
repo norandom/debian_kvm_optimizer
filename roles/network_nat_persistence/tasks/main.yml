@@ -134,19 +134,6 @@
     - { key: "net.ipv4.tcp_sack", value: "1" }
   tags: [network, bittorrent, performance]
 
-- name: Optimize network interface for high traffic
-  command: "{{ item }}"
-  loop:
-    - "ethtool -G {{ network_interfaces.primary }} rx 4096 tx 4096"
-    # Disable checksumming to fix Intel I219-LM Hardware Unit Hangs
-    - "ethtool -K {{ network_interfaces.primary }} tx off rx off"
-    # Disable all offloading features to prevent Hardware Unit Hangs
-    - "ethtool -K {{ network_interfaces.primary }} gso off gro off tso off sg off"
-    - "ethtool -K {{ network_interfaces.primary }} rxvlan off txvlan off"
-    # Flow control can remain enabled
-    - "ethtool -A {{ network_interfaces.primary }} rx on tx on"
-  ignore_errors: yes
-  tags: [network, interface, performance]
 
 - name: Create disable NIC offloading service
   template:
