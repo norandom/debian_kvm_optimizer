@@ -1,8 +1,8 @@
 ---
 # KSM Configuration for high VM density host
 ksm_config:
-  # Enable KSM
-  run: 1
+  # Disable KSM by default
+  run: 0
   
   # Zero page merging (important for VMs)
   use_zero_pages: 1
