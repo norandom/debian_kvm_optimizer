@@ -104,6 +104,27 @@
     mode: '0644'
   tags: [kvm, modprobe]
 
+- name: Configure KVM Intel module with nested virtualization enabled
+  lineinfile:
+    path: /etc/modprobe.d/kvm_intel.conf
+    regexp: '^options kvm_intel'
+    line: 'options kvm_intel nested=1 ept=1 vpid=1 enable_apicv=1 unrestricted_guest=1'
+    create: yes
+    mode: '0644'
+  tags: [kvm, modprobe, nested]
+
+- name: Check if nested virtualization is enabled
+  command: cat /sys/module/kvm_intel/parameters/nested
+  register: nested_status
+  changed_when: false
+  failed_when: false
+  tags: [kvm, nested, check]
+
+- name: Report nested virtualization status
+  debug:
+    msg: "Nested virtualization status: {{ nested_status.stdout | default('Unknown - module may not be loaded') }}"
+  tags: [kvm, nested, check]
+
 - name: Configure memory ballooning for VMs
   template:
     src: vm-memory-ballooning.sh.j2
