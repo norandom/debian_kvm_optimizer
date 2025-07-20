@@ -1,4 +1,4 @@
 # Global variables for host optimization
 # VM Memory Ballooning Exclusions
 # List VMs that should NOT have their memory dynamically adjusted
-vm_ballooning_exclusions: "genai k3s"
+vm_ballooning_exclusions: "genai k3s win*"

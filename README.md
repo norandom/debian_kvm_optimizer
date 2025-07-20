@@ -1,6 +1,6 @@
-# KVM Host Optimization - Ansible Pull Workflow
+# KVM Host Optimization - Manual Execution
 
-Automated optimization for Debian Bookworm KVM virtualization hosts using Ansible pull methodology.
+Manual optimization for Debian Bookworm KVM virtualization hosts using Ansible playbooks.
 
 >   Memory Optimization Results:
 >
@@ -78,29 +78,26 @@ This playbook optimizes the **host OS only** for running KVM virtual machines on
 ## Quick Start
 
 **Fork and adapt** (!) - I don't maintain your systems. I maintain mine.
-This is a Git-Ops style pull workflow (!).
+Manual execution only to prevent system instability.
 
-1. **Run setup on host**:
+1. **Setup and run on host**:
 ```bash
 ssh root@$MY_HOST_IP
-curl -O https://raw.githubusercontent.com/norandom/debian_kvm_optimizer/main/setup.sh
-chmod +x setup.sh
+git clone <your-repository-url>
+cd dedicated_kvm_debian
 ./setup.sh
 ```
 
 The setup script will:
-- Prompt for your repository URL *(!)*
 - Install Ansible and required packages
-- Set up the ansible-pull service to automatically pull from your repository
-- Run the initial optimization
+- Run the initial optimization manually
 
-2. **Monitor**:
+2. **Manual execution**:
 ```bash
-# Check service status
-systemctl status ansible-pull.timer
+# Run optimization manually
+ansible-playbook -c local -i inventory/hosts.yml site.yml
 
-# Watch logs
-journalctl -u ansible-pull.service -f
+# Check logs
 tail -f /var/log/Debian_KVM_Optimization.log
 ```
 
@@ -115,16 +112,13 @@ tail -f /var/log/Debian_KVM_Optimization.log
 │   ├── host_storage_optimization/
 │   ├── ksm_optimization/        # KSM memory deduplication
 │   └── network_nat_persistence/ # Network NAT and firewall
-├── ansible-pull.service         # Systemd service
-├── ansible-pull.timer          # Systemd timer (30min)
 └── setup.sh                    # Installation script
 ```
 
-## Ansible Pull Workflow
+## Manual Execution Workflow
 
-- Runs every 30 minutes via systemd timer
-- Random delay (0-5 minutes) to prevent load spikes
-- Autonomous configuration management
+- Manual execution only to prevent system instability
+- Run when needed for configuration changes
 - Logs all changes and system metrics
 - Alerts on storage usage >90%
 
@@ -143,12 +137,12 @@ tail -f /var/log/Debian_KVM_Optimization.log
 
 ```bash
 # Run optimization manually
-systemctl start ansible-pull.service
+ansible-playbook -c local -i inventory/hosts.yml site.yml
 
 # Run specific optimization
-ansible-playbook -i inventory/hosts.yml site.yml --tags="storage"
-ansible-playbook -i inventory/hosts.yml site.yml --tags="ksm"
-ansible-playbook -i inventory/hosts.yml site.yml --tags="network"
+ansible-playbook -c local -i inventory/hosts.yml site.yml --tags="storage"
+ansible-playbook -c local -i inventory/hosts.yml site.yml --tags="ksm"
+ansible-playbook -c local -i inventory/hosts.yml site.yml --tags="network"
 
 # Check KSM status
 /usr/local/bin/ksm-optimization.sh stats
@@ -185,7 +179,7 @@ Edit `inventory/hosts.yml` to adjust:
 ## Security
 
 - Runs as root (required for system optimization)
-- Configuration stored in `/opt/kvm-host-optimization`
+- Manual execution only to prevent system instability
 - Logs rotated automatically
 - No external dependencies beyond system packages
-- Commits are signed here
+- No automated workflows to reduce attack surface

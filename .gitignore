@@ -1,0 +1,4 @@
+# Scripts to ignore
+crash-debug.sh
+start.sh
+start-vms.sh
