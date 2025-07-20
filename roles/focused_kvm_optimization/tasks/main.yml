@@ -95,6 +95,15 @@
   notify: restart libvirtd
   tags: [qemu]
 
+- name: Fix KVM module parameters (remove nested from generic kvm module)
+  lineinfile:
+    path: /etc/modprobe.d/kvm.conf
+    regexp: '^options kvm'
+    line: 'options kvm ignore_msrs=1 halt_poll_ns=10000 report_ignored_msrs=0 min_timer_period_us=500 tdp_mmu=1'
+    create: yes
+    mode: '0644'
+  tags: [kvm, modprobe]
+
 - name: Configure memory ballooning for VMs
   template:
     src: vm-memory-ballooning.sh.j2
