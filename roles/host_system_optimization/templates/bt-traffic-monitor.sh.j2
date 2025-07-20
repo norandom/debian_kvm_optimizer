@@ -48,15 +48,15 @@ check_interface_stats() {
     echo "[$TIMESTAMP] === Network Interface Statistics ===" >> $LOG_FILE
     
     # Get interface statistics
-    RX_PACKETS=$(cat /sys/class/net/{{ host_network.primary_interface }}/statistics/rx_packets)
-    TX_PACKETS=$(cat /sys/class/net/{{ host_network.primary_interface }}/statistics/tx_packets)
-    RX_BYTES=$(cat /sys/class/net/{{ host_network.primary_interface }}/statistics/rx_bytes)
-    TX_BYTES=$(cat /sys/class/net/{{ host_network.primary_interface }}/statistics/tx_bytes)
-    RX_ERRORS=$(cat /sys/class/net/{{ host_network.primary_interface }}/statistics/rx_errors)
-    TX_ERRORS=$(cat /sys/class/net/{{ host_network.primary_interface }}/statistics/tx_errors)
+    RX_PACKETS=$(cat /sys/class/net/{{ host_network.primary_interface | default('eno1') }}/statistics/rx_packets)
+    TX_PACKETS=$(cat /sys/class/net/{{ host_network.primary_interface | default('eno1') }}/statistics/tx_packets)
+    RX_BYTES=$(cat /sys/class/net/{{ host_network.primary_interface | default('eno1') }}/statistics/rx_bytes)
+    TX_BYTES=$(cat /sys/class/net/{{ host_network.primary_interface | default('eno1') }}/statistics/tx_bytes)
+    RX_ERRORS=$(cat /sys/class/net/{{ host_network.primary_interface | default('eno1') }}/statistics/rx_errors)
+    TX_ERRORS=$(cat /sys/class/net/{{ host_network.primary_interface | default('eno1') }}/statistics/tx_errors)
     
-    echo "[$TIMESTAMP] {{ host_network.primary_interface }}: RX $RX_PACKETS pkts ($RX_BYTES bytes), TX $TX_PACKETS pkts ($TX_BYTES bytes)" >> $LOG_FILE
-    echo "[$TIMESTAMP] {{ host_network.primary_interface }}: RX errors $RX_ERRORS, TX errors $TX_ERRORS" >> $LOG_FILE
+    echo "[$TIMESTAMP] {{ host_network.primary_interface | default('eno1') }}: RX $RX_PACKETS pkts ($RX_BYTES bytes), TX $TX_PACKETS pkts ($TX_BYTES bytes)" >> $LOG_FILE
+    echo "[$TIMESTAMP] {{ host_network.primary_interface | default('eno1') }}: RX errors $RX_ERRORS, TX errors $TX_ERRORS" >> $LOG_FILE
     
     # Alert on high error rates
     if [[ $RX_ERRORS -gt 1000 ]]; then
@@ -105,12 +105,12 @@ check_system_load() {
     # Alert on high load (> CPU count)
     if command -v bc >/dev/null 2>&1; then
         # bc is available - use floating point comparison
-        if (( $(echo "$LOAD_1MIN > {{ host_specs.cpu_threads }}" | bc -l) )); then
+        if (( $(echo "$LOAD_1MIN > {{ host_specs.cpu_threads | default(12) }}" | bc -l) )); then
             echo "[$TIMESTAMP] WARNING: High 1-minute load: $LOAD_1MIN" >> $LOG_FILE
         fi
     else
         # bc not available - use awk for floating point comparison
-        if awk "BEGIN {exit !($LOAD_1MIN > {{ host_specs.cpu_threads }})}"; then
+        if awk "BEGIN {exit !($LOAD_1MIN > {{ host_specs.cpu_threads | default(12) }})}"; then
             echo "[$TIMESTAMP] WARNING: High 1-minute load: $LOAD_1MIN" >> $LOG_FILE
         fi
     fi
